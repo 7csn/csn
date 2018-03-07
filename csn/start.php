@@ -20,7 +20,7 @@ define('Csn_s', Csn . 's' . XG);
 define('Csn_y', Csn . 'y' . XG);
 define('Csn_x', Csn . 'x' . XG);
 
-// 站点资源、站点、运行目录路径
+// 项目资源目录、项目目录、运行目录
 define('Pub', realpath('.') . XG);
 define('App', dirname(Pub) . XG);
 define('Run', App . 'runtime' . XG);
