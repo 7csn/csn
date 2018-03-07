@@ -7,4 +7,4 @@ version_compare(PHP_VERSION, '5.4', '>=') || die('Require PHP version >= 5.4');
 include __DIR__ . DIRECTORY_SEPARATOR . 'start.php';
 
 // 启动框架
-\csn\csn::run();
+\csn\Csn::run();
