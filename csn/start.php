@@ -19,10 +19,13 @@ define('Csn_s', Csn . 's' . XG);
 define('Csn_y', Csn . 'y' . XG);
 define('Csn_x', Csn . 'x' . XG);
 
-// 项目资源目录、项目目录、运行目录
+// 项目相关目录
 define('Pub', realpath('.') . XG);
 define('App', dirname(Pub) . XG);
-define('Run', App . 'runtime' . XG);
+define('App_c', App . 'controllers' . XG);
+define('App_m', App . 'models' . XG);
+define('App_v', App . 'views' . XG);
+define('App_r', App . 'runtime' . XG);
 
 // 基于框架项目根目录
 define('Web', dirname(App) . XG);
