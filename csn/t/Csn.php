@@ -5,10 +5,12 @@ namespace csn\t;
 class Csn
 {
 
-    protected static $load = [];            // 加载类库
     protected static $inc = [];             // 加载文件
     protected static $obj = [];             // 模型文件
-    protected static $transaction = false;  // 开启事务
+    protected static $act = [];             // 控制器文件
+    protected static $transaction = false;  // 数据库事务
+    // 加载类库
+    protected static $load = ['app\m\\' => [], 'app\\' => [], 'csn\t\\' => [], 'csn\y\\' => []];
     // 文件引入相关信息
     protected static $file = [Csn => 'csn', App => 'app', Web => 'web'];
     // 自动加载类相关信息
@@ -29,8 +31,6 @@ class Csn
         date_default_timezone_set(Conf::web('timezone'));
         // 路由分隔符
         define('SP', Conf::web('separator'));
-        // 控制器目录
-        define('CTL', Conf::web('controller'));
         // 获取浏览器信息
         define('UA', isset($_SERVER['HTTP_USER_AGENT']) ? $_SERVER['HTTP_USER_AGENT'] : null);
     }
@@ -59,7 +59,7 @@ class Csn
     static function act($c, $m = false)
     {
         $name = ($m ? XG . $m : '') . XG . $c;
-        key_exists($c, self::$act) && self::$act[$c]['name'] === $name || Exp::end('不能跨模块引入同名控制器');
+        key_exists($c, self::$act) && self::$act[$c]['name'] === $name && Exp::end('不能跨模块引入同名控制器');
         self::inc(App_c . $name . '.php');
         $class = '\app\c\\' . $c;
         self::$act[$c] = ['name' => $name, 'class' => new $class()];
@@ -73,9 +73,9 @@ class Csn
         if (is_null($res)) return;
         $type = $res[0];
         $name = str_replace('\\', XG, str_replace($type, '', $class));
-        $file = $res[1] . $name;
+        $file = $res[1] . $name . '.php';
         in_array($name, self::$load[$type]) && Exp::end('类' . $class . '异常');
-        is_file($file) ? include $file : Exp::end('找不到类' . $class);
+        is_file($file) ? include $file : die('找不到类' . $class);
         self::$load[$type][] = $name;
     }
 
@@ -134,6 +134,12 @@ class Csn
                 header('Content-Type:application/json');
                 return is_string($back) ? $back : json_encode($back);
         }
+    }
+
+    // 获取事务状态
+    static function transaction()
+    {
+        return self::$transaction;
     }
 
 }
