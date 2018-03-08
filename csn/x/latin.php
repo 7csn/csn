@@ -75,8 +75,7 @@ function T()
 // 获取路由
 function U($path = null)
 {
-    $uri = \csn\t\Request::uri(true);
-    return is_null($path) ? $uri : PRE_B . $path;
+    return \csn\t\Request::makeUrl($path);
 }
 
 // 调试数据
