@@ -28,7 +28,7 @@ define('Run', App . 'runtime' . XG);
 define('Web', dirname(App) . XG);
 
 // 引入框架核心类文件
-include Csn . 'csn.php';
+include Csn_t . 'csn.php';
 
 // 自加载composer类库
 \csn\t\Csn::inc(Web . 'vendor' . XG . 'autoload.php');
