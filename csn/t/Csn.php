@@ -99,7 +99,7 @@ class Csn
         return $res;
     }
 
-    // 显示跳转
+    // 显示信息并跳转
     static function go($url, $info = false, $time = 1000)
     {
         $url = Request::makeUrl($url);
