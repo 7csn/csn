@@ -11,15 +11,8 @@ return [
     'charset' => 'UTF-8',
     // 路由分隔符
     'separator' => '/',
-    // 模板编译
-    'template' => [
-        // 编译目录
-        'compile' => 'compile',
-        // 静态页目录
-        'html' => 'html',
-        // 静态页缓存秒数(0表示不缓存)
-        'cache_time' => 0
-    ],
+    // 视图缓存时间(0不缓存)
+    'view_cache' => 60,
     // 开发者邮箱
     'email' => '1479672753@qq.com'
 ];
