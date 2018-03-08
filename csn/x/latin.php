@@ -9,7 +9,7 @@ function C($n)
 }
 
 // 生产报错
-function D($m = 'Csn-tsyx')
+function D($m)
 {
     \csn\t\Exp::close($m)->E();
 }
