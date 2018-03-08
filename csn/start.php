@@ -34,7 +34,7 @@ include Csn . 'csn.php';
 // 自加载composer类库
 \csn\Csn::inc(Web . 'vendor' . XG . 'autoload.php');
 
-// 自动加载框架、项目类
+// 自加载框架、项目类
 spl_autoload_register('\csn\Csn::load');
 
 // 自定义错误、异常
