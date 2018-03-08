@@ -29,6 +29,7 @@ class Safe
     // 初始化密钥
     static function secretInit()
     {
+        Conf::init();
         File::write(App . 'secret.ini', "key='" . md5(uniqid()) . "'\nlock='" . str_shuffle('0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ/=+_-') . "'");
     }
 
