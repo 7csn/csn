@@ -38,6 +38,7 @@ class Csn
     // 启动框架
     static function run()
     {
+        defined('CT') && Safe::secretInit();
         exit(Request::parse());
     }
 
