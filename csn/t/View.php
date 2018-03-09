@@ -263,7 +263,7 @@ class View
     // 视图目录
     protected static function viewDir()
     {
-        return is_null(self::$viewDir) ? self::$viewDir = App . Conf::web('view') . XG : self::$viewDir;
+        return is_null(self::$viewDir) ? self::$viewDir = App_v : self::$viewDir;
     }
 
     // 编译静态目录
