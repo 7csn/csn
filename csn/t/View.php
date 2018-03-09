@@ -83,7 +83,7 @@ class View
     // 编译模板
     protected function compileGo($path)
     {
-        $content = file_get_contents($path);
+        $content = "<?php namespace app\c; ?>" . file_get_contents($path);
         $this->compileExtends($content);
         $this->compileSectionChange($content);
         $this->compileSectionShow($content);
@@ -239,7 +239,7 @@ class View
     // 编译include模板
     protected static function _compileInclude($match)
     {
-        return '<?php \csn\t\viewInclude("' . $match[2] . '", ' . (empty($match[5]) ? '[]' : '["' . $match[5] . '"=>$' . $match[5] . ']') . ', ' . (empty($match[8]) ? 'null' : (int)$match[8]) . ');?>';
+        return '<?php viewInclude("' . $match[2] . '", ' . (empty($match[5]) ? '[]' : '["' . $match[5] . '"=>$' . $match[5] . ']') . ', ' . (empty($match[8]) ? 'null' : (int)$match[8]) . ');?>';
     }
 
     // 模板源文件
