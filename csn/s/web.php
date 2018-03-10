@@ -11,8 +11,6 @@ return [
     'charset' => 'UTF-8',
     // 路由分隔符
     'separator' => '/',
-    // 视图缓存时间(0不缓存)
-    'view_cache' => 60,
-    // 开发者邮箱
-    'email' => '1479672753@qq.com'
+    // 静态页缓存时间
+    'view_cache' => 60
 ];
