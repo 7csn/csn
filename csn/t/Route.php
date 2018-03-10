@@ -111,7 +111,7 @@ class Route
                     }
                     if (!key_exists('input', $route) || $method !== 'POST' || self::input($route['input'])) {
                         $search = ['point' => $route['point'], 'args' => $args];
-                        is_null(self::$define) && self::$define = str_replace('/', '@', str_replace(Conf::web('separator'), '@', str_replace('?', '#', $key)));
+                        is_null(self::$define) && self::$define = str_replace('/', '@', str_replace(SP, '@', str_replace('?', '#', $key)));
                         break;
                     }
                 }
