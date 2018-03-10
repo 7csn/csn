@@ -25,6 +25,7 @@ define('App', dirname(Pub) . XG);
 define('App_c', App . 'controllers' . XG);
 define('App_m', App . 'models' . XG);
 define('App_v', App . 'views' . XG);
+define('App_s', App . 'session' . XG);
 define('App_r', App . 'runtime' . XG);
 define('App_t', App . 'template' . XG);
 
