@@ -9,6 +9,7 @@ class Tap
     protected $path;        // 路由标记
     protected $where = [];  // 参数正则
     protected $input = [];  // POST验证
+    protected $cache;       // 静态页缓存时效
 
     // 开关对象
     function __construct($method, $path)
@@ -44,7 +45,7 @@ class Tap
     }
 
     // 路由正则条件解析
-    function parse()
+    function parse($show = false)
     {
         $path = str_replace('/', '\\/', $this->path);
         foreach ($this->where as $key => $preg) {
@@ -54,7 +55,14 @@ class Tap
             Route::$tap[$method][$this->path]['preg'] = $path;
             Route::$tap[$method][$this->path]['parse'] = true;
         }
-        return $path;
+        return $show ? $path : $this;
+    }
+
+    // 静态页缓存时效
+    function cache($time = 0)
+    {
+        $this->cache = $time;
+        return $this;
     }
 
 }
