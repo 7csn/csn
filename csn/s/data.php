@@ -5,6 +5,7 @@ return [
     'session' => [
         'memcache' => false,
         'cookie' => [
+            'save_path' => App_s,
             'use_cookies' => 1,
             'use_only_cookies' => 1,
             'cookie_httponly' => 1,
@@ -40,7 +41,7 @@ return [
         ]
     ],
     // 数据库配置
-    'database' => [
+    'model' => [
         'num' => 1,
         'nodes' => [
             '127.0.0.1:6379'
