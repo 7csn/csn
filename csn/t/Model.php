@@ -16,18 +16,18 @@ class Model
     // 查询
     static function find()
     {
-
+        return self::name();
     }
 
     static function all($field = '*')
     {
-
+//        return self::link()->query('')
     }
 
     // 获取子类名
     static function name()
     {
-        return substr(strrchr(get_called_class(), '\\'), 1);
+        return substr(strrchr(static::class, '\\'), 1);
     }
 
 }
