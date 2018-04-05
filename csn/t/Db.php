@@ -172,11 +172,13 @@ class Db
     {
         $pdo = self::$pdo;
         $pdo->beginTransaction();
+        Csn::setTransaction(true);
         $args = func_get_args();
         $fn = $args[0];
         $args[0] = $pdo;
         $b = call_user_func_array($fn, $args);
         $pdo->{$b ? 'rollBack' : 'commit'}();
+        Csn::setTransaction();
         return $b;
     }
 
