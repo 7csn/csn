@@ -12,18 +12,9 @@ class Wx
     // 获取微信相关配置
     protected static function get($name = false)
     {
-        if (!self::$wx) {
-            self::$wx = \csn\t\Conf::wx();
-        }
-        if ($name) {
-            if (isset(self::$wx[$name])) {
-                return self::$wx[$name];
-            } else {
-                \csn\t\Exp::close('微信项' . $name . '配置不正确')->E();
-            }
-        } else {
-            return self::$wx;
-        }
+        self::$wx || self::$wx = \csn\t\Conf::wx();
+        if (!$name) return self::$wx;
+        return key_exists($name, self::$wx) ? self::$wx[$name] : \csn\t\Exp::close('微信项' . $name . '配置不正确')->E();
     }
 
     static function getSignPackage()

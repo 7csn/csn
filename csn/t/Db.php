@@ -4,7 +4,7 @@ namespace csn\t;
 
 class Db
 {
-
+    static private $dbs = [];
     static private $me;
     static private $key;
     static private $pdo;
@@ -57,7 +57,7 @@ class Db
     {
         is_bool($f) ? $c = $f : $this->field($f);
         $field = current($this->parseField());
-        empty($field) && exp::end('Sql字段元素不正确！');
+        empty($field) && Exp::end('Sql字段元素不正确！');
         $bind = $this->parseBind();
         $set = [];
         foreach ($field as $k => $v) {
@@ -71,7 +71,7 @@ class Db
     }
 
     //查询操作
-    function select($m = 2, $c = false)
+    function select($m = \PDO::FETCH_OBJ, $c = false)
     {
         if (is_bool($m)) {
             $c = $m;
@@ -141,7 +141,7 @@ class Db
             $sth = self::$pdo->prepare($sql);
             $sth->execute($bind);
         }
-        $sth->setFetchMode(2);
+        $sth->setFetchMode(\PDO::FETCH_OBJ);
         $arr = [];
         while ($v = $sth->fetch()) {
             $arr[] = $v;
@@ -156,7 +156,7 @@ class Db
     {
         $rm = new \ReflectionMethod($this, 'query');
         $res = $rm->invokeArgs($this, func_get_args());
-        return current($res) ?: [];
+        return current($res) ?: new \stdClass();
     }
 
     //获取单个字段值
@@ -164,7 +164,7 @@ class Db
     {
         $rm = new \ReflectionMethod($this, 'getOne');
         $res = $rm->invokeArgs($this, func_get_args());
-        return current($res) ?: [];
+        return current($res) ?: null;
     }
 
     //事务处理
@@ -193,24 +193,24 @@ class Db
     static function connect($k = 0)
     {
         if (self::$key !== $k) {
-            if (!isset(Csn::$usedb[$k])) {
-                $db = Conf::db();
+            if (!isset(self::$dbs[$k])) {
+                $db = Conf::data('db');
                 if (key_exists($k, $db)) {
                     $con = $db[$k];
                     try {
                         $pdo = new \PDO("mysql:host={$con['dh']}", $con['du'], $con['dp']);
                         $pdo->query('SET NAMES utf8');
                         self::$arr[$k] = ['db' => $con['db'], '_db' => null, 'th' => $con['dth']];
-                        Csn::$usedb[$k] = $pdo;
+                        self::$dbs[$k] = $pdo;
                         self::$key = $k;
                     } catch (\PDOException $e) {
-                        exp::end('[PDO]：' . str_replace("\n", '', iconv("GB2312//IGNORE", "UTF-8", $e->getMessage())));
+                        Exp::end('[PDO]：' . str_replace("\n", '', iconv("GB2312//IGNORE", "UTF-8", $e->getMessage())));
                     }
                 } else {
-                    exp::end('找不到数据库配置键' . $k);
+                    Exp::end('找不到数据库配置键' . $k);
                 }
             }
-            self::$pdo = Csn::$usedb[$k];
+            self::$pdo = self::$dbs[$k];
         }
         return self::me();
     }
@@ -354,14 +354,14 @@ class Db
     //获取表条件
     private function tablePart()
     {
-        key_exists('table', $this->sql_arr) || exp::end('Sql表元素不存在！');
+        key_exists('table', $this->sql_arr) || Exp::end('Sql表元素不存在！');
         return $this->sql_arr['table'];
     }
 
     //获取字段条件
     private function fieldPart()
     {
-        key_exists('field', $this->sql_arr) || exp::end('Sql表字段不存在！');
+        key_exists('field', $this->sql_arr) || Exp::end('Sql表字段不存在！');
         return $this->sql_arr['field'];
     }
 
@@ -409,17 +409,17 @@ class Db
     //关闭当前连接
     static function close()
     {
-        self::$pdo = Csn::$usedb[self::$key] = self::$key = self::$sql = null;
+        self::$pdo = self::$dbs[self::$key] = self::$key = self::$sql = null;
     }
 
     //关闭所有连接
     static function closeAll()
     {
         is_null(self::$key) || self::close();
-        foreach (Csn::$usedb as &$v) {
+        foreach (self::$dbs as &$v) {
             $v = null;
         }
-        Csn::$usedb = [];
+        self::$dbs = [];
     }
 
 }

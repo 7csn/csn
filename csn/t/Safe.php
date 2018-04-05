@@ -21,9 +21,9 @@ class Safe
     static function secret()
     {
         $file = App . 'secret.ini';
-        is_file($file) || exp::end('未检测到密钥文件，请先创建');
+        is_file($file) || Exp::end('未检测到密钥文件，请先创建');
         $secret = parse_ini_file($file);
-        key_exists('key', $secret) && key_exists('lock', $secret) && strlen($secret['key']) === 32 && strlen($secret['lock']) === 67 || exp::end('密钥文件异常');
+        key_exists('key', $secret) && key_exists('lock', $secret) && strlen($secret['key']) === 32 && strlen($secret['lock']) === 67 || Exp::end('密钥文件异常');
     }
 
     // 初始化密钥
@@ -41,7 +41,7 @@ class Safe
             $point = self::$safe[$name];
             return is_string($point) ? preg_match($point, $args[0]) : call_user_func_array($point, $args);
         } else {
-            exp::end('验证函数' . $name . '无效，请检查safe配置文件');
+            Exp::end('验证函数' . $name . '无效，请检查safe配置文件');
         }
     }
 

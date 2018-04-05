@@ -2,6 +2,12 @@
 
 namespace app\c;
 
+// 缓存
+function system($name, $func = null) {
+    static $system = [];
+    return key_exists($name, $system) ? $system[$name] : $system[$name] = call_user_func_array($func, (new \ReflectionFunction($func))->getParameters());
+}
+
 // 导入视图
 function view()
 {

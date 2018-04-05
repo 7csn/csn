@@ -55,7 +55,7 @@ class File
             $list['type'] = 'file';
             $list['size'] = filesize($path);
         } else {
-            exp::end('路径' . $path . '异常');
+            Exp::end('路径' . $path . '异常');
         }
         return $list;
     }

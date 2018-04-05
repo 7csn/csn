@@ -35,7 +35,7 @@ class Exp
     static function error($code, $msg, $file, $line)
     {
         self::$error[] = [$code, $msg, $file, $line];
-        Csn::transaction() || self::run();
+        Csn::getTransaction() || self::run();
     }
 
     // 自定义异常处理
@@ -147,7 +147,7 @@ class Exp
     // 根据模式报错
     static function end()
     {
-        (Conf::web('debug') ? Exp::open(func_get_args(), 'print_r') : Exp::close('页面不存在'))->E();
+        T_S ? Exp::open(func_get_args(), 'print_r')->E() : Exp::close('页面不存在')->E();
     }
 
     // 结束程序

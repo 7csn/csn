@@ -50,12 +50,11 @@ return [
     // 跨库配置
     'db' => [
         [
-            'host' => '127.0.0.1',
-            'port' => '3306',
-            'dbn' => 'test',
-            'usr' => 'root',
-            'pwd' => 'root',
-            'dth' => ''
+            'dh' => '127.0.0.1',
+            'db' => 'test',
+            'du' => 'root',
+            'dp' => 'root',
+            'dth' => 'ls_'
         ]
     ]
 ];

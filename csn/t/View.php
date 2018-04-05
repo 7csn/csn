@@ -6,9 +6,9 @@ class View
 {
 
     protected $useView;                 // 当前视图文件
-    protected $sectionSave = [];        // 父模板块数组
-    protected $sectionChange = [];      // 子模板块数组
-    protected $content = '';            // 当前静态内容
+    protected $sectionSave = [];       // 父模板块数组
+    protected $sectionChange = [];     // 子模板块数组
+    protected $content = '';           // 当前静态内容
     protected static $cacheTime;        // 默认缓存时间
     protected static $viewDir;          // 视图存放目录
     protected static $templateDir = []; // 编译静态目录
@@ -70,7 +70,7 @@ class View
     // 编译文件是否有效
     protected static function compileOk($path, $names)
     {
-        return is_file($source = self::source($path)) ? (is_file($outfile = self::output($path)) && filemtime($outfile) >= filemtime($source)) ? $outfile : false : (is_file($outfile = self::source($path, false)) ? $outfile : exp::end('找不到视图' . $names));
+        return is_file($source = self::source($path)) ? (is_file($outfile = self::output($path)) && filemtime($outfile) >= filemtime($source)) ? $outfile : false : (is_file($outfile = self::source($path, false)) ? $outfile : Exp::end('找不到视图' . $names));
     }
 
     // 解析模板
@@ -113,7 +113,7 @@ class View
         $names = $match[2];
         $path = self::path($names);
         $source = self::source($path, true);
-        is_file($source) || exp::end('找不到视图模板' . $path);
+        is_file($source) || Exp::end('找不到视图模板' . $path);
         $parent = file_get_contents($source);
         $this->compileSectionSave($parent);
         return $parent;
@@ -166,7 +166,7 @@ class View
     // 注释模板
     protected static function compileNodes(&$content)
     {
-        $content = preg_replace('/{\*([^}]+)\*}/', '<?php echo "<!--\1-->"; ?>', $content);
+        $content = preg_replace('/{\*([^}]+)\*}/', '<!--\1-->', $content);
     }
 
     // echo模板

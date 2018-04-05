@@ -73,7 +73,7 @@ class Route
     static function run($path)
     {
         $search = self::find($path);
-        is_null($search) && exp::end('路由未定义或有误');
+        is_null($search) && Exp::end('路由未定义或有误');
         // 检测密钥
         Safe::secret();
         // 访问日志
@@ -149,22 +149,22 @@ class Route
     protected static function action($point)
     {
         preg_match_all('/^(\w+\/)?(\w+)@(\w+)$/', $point, $match);
-        empty($match[0]) && exp::end('路由指向异常');
+        empty($match[0]) && Exp::end('路由指向异常');
         Request::$m = substr($match[1][0], 0, -1);
         Request::$c = $match[2][0];
         Request::$a = $match[3][0];
         // 加载控制器
         $c = Csn::act(Request::$c, Request::$m);
-        method_exists($c, Request::$a) || exp::end('控制器' . Request::$m . Request::$c . '找不到方法' . Request::$a);
+        method_exists($c, Request::$a) || Exp::end('控制器' . Request::$m . Request::$c . '找不到方法' . Request::$a);
         return [$c, Request::$a];
     }
 
     // 解析路由指向方法参数
     protected static function actParams($params, $args)
     {
-        count($params) === count($args) || exp::end('路由指向方法参数数量有误');
+        count($params) === count($args) || Exp::end('路由指向方法参数数量有误');
         foreach ($args as $k => $v) {
-            $v === '{@}' && ($params[$k]->isDefaultValueAvailable() ? $args[$k] = $params[$k]->getDefaultValue() : exp::end('路由指向方法参数' . $params[$k]->name . '无值'));
+            $v === '{@}' && ($params[$k]->isDefaultValueAvailable() ? $args[$k] = $params[$k]->getDefaultValue() : Exp::end('路由指向方法参数' . $params[$k]->name . '无值'));
         }
         return $args;
     }

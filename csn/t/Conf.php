@@ -21,7 +21,7 @@ class Conf
             }
             self::$init = true;
         }
-        File::copys([Csn . '.htaccess' => Pub . '.htaccess', Csn . 'nginx.conf' => Pub . 'nginx..conf', Csn . 'favicon.ico' => Pub . 'favicon.ico'], $force);
+        File::copies([Csn . '.htaccess' => Pub . '.htaccess', Csn . 'favicon.ico' => Pub . 'favicon.ico'], $force);
     }
 
     // 初始化默认项数组

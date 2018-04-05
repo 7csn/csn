@@ -9,8 +9,8 @@ class Http
     protected $file;        // 请求文件
     protected $no;          // 错误号
     protected $str;         // 错误信息
-    protected $connect;     // 连接
-    protected $boundary;    // 文件分隔符
+    protected $connect;    // 连接
+    protected $boundary;   // 文件分隔符
 
     // 文件类型
     protected static $mimeType = [
@@ -33,7 +33,7 @@ class Http
     // 网络连接对象
     function __construct($url, $time = 30)
     {
-        preg_match_all('/^(https?:\/\/)?([\w\.]+)(:([\d]+))?(\/.*?)?$/', $url, $m);
+        preg_match_all('/^(https?:\/\/|ssl:\/\/)?([\w\.]+)(:([\d]+))?(\/.*?)?$/', $url, $m);
         $this->host = $m[2][0];
         $this->file = $m[5][0] ?: '/';
         $port = $m[4][0] ? (int)$m[4][0] : ($m[1][0] === 'https://' ? 443 : 80);
@@ -60,7 +60,7 @@ class Http
             array_unshift($args, strtoupper($name));
             return call_user_func_array([$this, 'exec'], $args);
         } else {
-            exp::end('http方法' . $name . '不存在');
+            Exp::end('http方法' . $name . '不存在');
         }
     }
 
@@ -121,21 +121,25 @@ class Http
     // 获取分隔符
     function boundary()
     {
-        return is_null($this->boundary) ? $this->boundary = md5(safe::get('key') . uniqid()) : $this->boundary;
+        return is_null($this->boundary) ? $this->boundary = md5(Safe::get('key') . uniqid()) : $this->boundary;
     }
 
     // 简单方式抓取网页
     static function simple($url, $time = 30)
     {
-        $ch = curl_init();
-        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-        curl_setopt($ch, CURLOPT_TIMEOUT, $time);
-        curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
-        curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, false);
-        curl_setopt($ch, CURLOPT_URL, $url);
-        $res = curl_exec($ch);
-        curl_close($ch);
-        return $res;
+        if (strpos($url, 'https') === 0) {
+            $ch = curl_init();
+            curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+            curl_setopt($ch, CURLOPT_TIMEOUT, $time);
+            curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
+            curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, false);
+            curl_setopt($ch, CURLOPT_URL, $url);
+            $res = curl_exec($ch);
+            curl_close($ch);
+            return $res;
+        } else {
+            return file_get_contents($url);
+        }
     }
 
 }

@@ -5,9 +5,9 @@ namespace csn\t;
 class Csn
 {
 
-    protected static $inc = [];             // 加载文件
-    protected static $obj = [];             // 模型文件
-    protected static $act = [];             // 控制器文件
+    protected static $inc = [];              // 加载文件
+    protected static $obj = [];              // 模型文件
+    protected static $act = [];              // 控制器文件
     protected static $transaction = false;  // 数据库事务
     // 加载类库
     protected static $load = ['app\m\\' => [], 'app\\' => [], 'csn\t\\' => [], 'csn\y\\' => []];
@@ -39,15 +39,17 @@ class Csn
     static function run()
     {
         defined('CT') && Safe::secretInit();
-        exit(Request::parse());
+        exit(Request::parse() . '');
     }
 
     // 控制台命令
     static function cmd()
     {
+        global $argc, $argv;
+        \app\c\V($argc, $argv);
     }
 
-    // 获取框架模型、外调模型
+    // 获取框架模型、外调模型、项目模型
     static function obj($class, array $args = [], $type = 't')
     {
         in_array($type, ['t', 'y', 'm']) || Exp::end('框架模型类不合格');
@@ -138,9 +140,15 @@ class Csn
     }
 
     // 获取事务状态
-    static function transaction()
+    static function getTransaction()
     {
         return self::$transaction;
+    }
+
+    // 修改事务状态
+    static function setTransaction($status = false)
+    {
+        self::$transaction = $status;
     }
 
 }

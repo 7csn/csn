@@ -69,7 +69,7 @@ function T()
 {
     $args = func_get_args();
     $t = array_shift($args);
-    return call_user_func_array('M', $args)->table($t);
+    return call_user_func_array('\app\c\M', $args)->table($t);
 }
 
 // 获取路由
