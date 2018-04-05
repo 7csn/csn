@@ -13,7 +13,7 @@ class Db
     static public $sql;
     static public $tbInfo = [];
 
-    //增加操作
+    // 增加操作
     function insert($f = null, $c = false)
     {
         is_bool($f) ? $c = $f : $this->field($f);
@@ -34,7 +34,7 @@ class Db
         return $b;
     }
 
-    //删除操作
+    // 删除操作
     function delete($w = null, $b = null, $c = false)
     {
         if (is_bool($w)) {
@@ -52,7 +52,7 @@ class Db
         return $b;
     }
 
-    //修改操作
+    // 修改操作
     function update($f = null, $c = false)
     {
         is_bool($f) ? $c = $f : $this->field($f);
@@ -70,7 +70,7 @@ class Db
         return $b;
     }
 
-    //查询操作
+    // 查询操作
     function select($m = \PDO::FETCH_OBJ, $c = false)
     {
         if (is_bool($m)) {
@@ -95,7 +95,7 @@ class Db
         return $arr;
     }
 
-    //查询一条数据
+    // 查询一条数据
     function find()
     {
         $this->sql_arr['limit'] = empty($this->sql_arr['limit']) ? 1 : ((($l = $this->sql_arr['limit']) && ($l = is_array($l) ? implode(',', $l) : $l)) && ($i = strpos($l, ',')) === false ? 1 : (substr($l, 0, $i + 1) . '1'));
@@ -104,7 +104,7 @@ class Db
         return current($res) ?: [];
     }
 
-    //查询一个字段
+    // 查询一个字段
     function one($f = null, $c = false)
     {
         if (is_bool($f)) {
@@ -116,7 +116,7 @@ class Db
         return is_null($f) ? current($find) ?: false : (key_exists($f, $find) ? $find[$f] : false);
     }
 
-    //增删改
+    // 增删改
     function exec($sql, $bind = [], $close = false)
     {
         if (is_bool($bind)) {
@@ -128,7 +128,7 @@ class Db
         return $b;
     }
 
-    //查询
+    // 查询
     function query($sql, $bind = [], $close = false)
     {
         if (is_bool($bind)) {
@@ -151,7 +151,7 @@ class Db
         return $arr;
     }
 
-    //获取一条数据
+    // 获取一条数据
     function getOne()
     {
         $rm = new \ReflectionMethod($this, 'query');
@@ -159,7 +159,7 @@ class Db
         return current($res) ?: new \stdClass();
     }
 
-    //获取单个字段值
+    // 获取单个字段值
     function getField()
     {
         $rm = new \ReflectionMethod($this, 'getOne');
@@ -167,7 +167,7 @@ class Db
         return current($res) ?: null;
     }
 
-    //事务处理
+    // 事务处理
     function commit()
     {
         $pdo = self::$pdo;
@@ -180,7 +180,7 @@ class Db
         return $b;
     }
 
-    //单例对象
+    // 单例对象
     static function me()
     {
         if (is_null(self::$me)) {
@@ -189,7 +189,7 @@ class Db
         return self::$me;
     }
 
-    //获取连接
+    // 获取连接
     static function connect($k = 0)
     {
         if (self::$key !== $k) {
@@ -204,7 +204,7 @@ class Db
                         self::$dbs[$k] = $pdo;
                         self::$key = $k;
                     } catch (\PDOException $e) {
-                        Exp::end('[PDO]：' . str_replace("\n", '', iconv("GB2312//IGNORE", "UTF-8", $e->getMessage())));
+                        Exp::end('[PDO]：' . str_replace("\n", '', iconv("GB2312// IGNORE", "UTF-8", $e->getMessage())));
                     }
                 } else {
                     Exp::end('找不到数据库配置键' . $k);
@@ -215,7 +215,7 @@ class Db
         return self::me();
     }
 
-    //指定数据库
+    // 指定数据库
     function db($db = null)
     {
         is_null($db) && $db = self::$arr[self::$key]['db'];
@@ -229,7 +229,7 @@ class Db
         return $this;
     }
 
-    //清空表;自增初始化
+    // 清空表;自增初始化
     function truncate($tb, $th = null)
     {
         if (is_null($th)) {
@@ -239,7 +239,7 @@ class Db
         return $this;
     }
 
-    //连接表
+    // 连接表
     function table($t, $th = null)
     {
         is_array($t) || $t = is_null($th) ? [$t] : [$t => $th];
@@ -247,56 +247,56 @@ class Db
         return $this;
     }
 
-    //字段
+    // 字段
     function field($f, $b = null)
     {
         empty($f) || ($this->bind($b)->sql_arr['field'] = $f);
         return $this;
     }
 
-    //条件
+    // 条件
     function where($w, $b = null)
     {
         empty($w) || ($this->bind($b)->sql_arr['where'] = $w);
         return $this;
     }
 
-    //子条件
+    // 子条件
     function having($h)
     {
         $this->sql_arr['having'] = $h;
         return $this;
     }
 
-    //归类
+    // 归类
     function group($g)
     {
         $this->sql_arr['group'] = $g;
         return $this;
     }
 
-    //顺序
+    // 顺序
     function order($o)
     {
         $this->sql_arr['order'] = $o;
         return $this;
     }
 
-    //限制
+    // 限制
     function limit($l)
     {
         $this->sql_arr['limit'] = $l;
         return $this;
     }
 
-    //编译
+    // 编译
     private function bind($b = null)
     {
         is_array($b) && $this->sql_arr['bind'] = key_exists('bind', $this->sql_arr) ? array_merge($this->sql_arr['bind'], $b) : $b;
         return $this;
     }
 
-    //条件处理
+    // 条件处理
     private function parseTable()
     {
         $tbs = ' ';
@@ -314,7 +314,7 @@ class Db
         return rtrim($tbs, ',');
     }
 
-    //字段数组处理
+    // 字段数组处理
     private function parseField()
     {
         $tbInfo = [];
@@ -339,33 +339,33 @@ class Db
         return $arr;
     }
 
-    //条件数组处理
+    // 条件数组处理
     private function parseWhere()
     {
         return key_exists('where', $this->sql_arr) && ($w = $this->sql_arr['where']) ? (' WHERE ' . (is_array($w) ? implode(' ', $w) : $w)) : '';
     }
 
-    //获取编译数组
+    // 获取编译数组
     private function parseBind()
     {
         return key_exists('bind', $this->sql_arr) ? $this->sql_arr['bind'] : [];
     }
 
-    //获取表条件
+    // 获取表条件
     private function tablePart()
     {
         key_exists('table', $this->sql_arr) || Exp::end('Sql表元素不存在！');
         return $this->sql_arr['table'];
     }
 
-    //获取字段条件
+    // 获取字段条件
     private function fieldPart()
     {
         key_exists('field', $this->sql_arr) || Exp::end('Sql表字段不存在！');
         return $this->sql_arr['field'];
     }
 
-    //获取指定部分sql语句
+    // 获取指定部分sql语句
     private function makeSql($k)
     {
         if (isset($this->sql_arr[$k])) {
@@ -390,7 +390,7 @@ class Db
         }
     }
 
-    //后续操作
+    // 后续操作
     private function backEnd($o)
     {
         $this->sql_arr = [];
@@ -406,13 +406,13 @@ class Db
         }
     }
 
-    //关闭当前连接
+    // 关闭当前连接
     static function close()
     {
         self::$pdo = self::$dbs[self::$key] = self::$key = self::$sql = null;
     }
 
-    //关闭所有连接
+    // 关闭所有连接
     static function closeAll()
     {
         is_null(self::$key) || self::close();
