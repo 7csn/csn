@@ -7,6 +7,13 @@ class Redis
 
     private static $obj = [];       // 对象
     private static $auth;           // 密码
+    private static $conf;           // 配置信息
+
+    // 配置信息
+    private static function conf()
+    {
+        return is_null(self::$conf) ? self::$conf = Conf::data('redis') : self::$conf;
+    }
 
     // Redis对象
     private static function obj($address = '127.0.0.1:6379')
@@ -26,7 +33,11 @@ class Redis
     // 密码数组
     private static function auth()
     {
-        return is_null(self::$auth) ? self::$auth = Conf::data('redis.auth') ?: [] : self::$auth;
+        if (is_null(self::$auth)) {
+            $conf = self::conf();
+            self::$auth = key_exists('auth', $conf) ? $conf['auth'] : [];
+        }
+        return self::$auth;
     }
 
     // Redis常用操作
