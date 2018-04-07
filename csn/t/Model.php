@@ -6,6 +6,8 @@ class Model
 {
 
     protected static $link;     // 数据库链接
+    protected $data = [];       // 对象属性
+    protected $columns = [];    // 数据结构
 
     // 获取数据库链接
     protected static function link()
@@ -19,9 +21,9 @@ class Model
         return self::name();
     }
 
+    // 查询全部行
     static function all($field = '*')
     {
-//        return self::link()->query('')
     }
 
     // 获取子类名
