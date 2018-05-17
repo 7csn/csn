@@ -60,7 +60,7 @@ return [
             '127.0.0.1:3306' => [
                 'du' => 'root',
                 'dp' => 'root',
-                'db' => 'test'
+                'dbn' => 'test'
             ]
         ]
     ],
