@@ -13,14 +13,14 @@ class Safe
     // 加载密钥
     static function get($name = null)
     {
-        is_null(self::$secret) && self::$secret = parse_ini_file(App . 'secret.ini');
+        is_null(self::$secret) && self::$secret = parse_ini_file(APP . 'secret.ini');
         return is_null($name) ? self::$secret : self::$secret[$name];
     }
 
     // 检查密钥
     static function secret()
     {
-        $file = App . 'secret.ini';
+        $file = APP . 'secret.ini';
         is_file($file) || Exp::end('未检测到密钥文件，请先创建');
         $secret = parse_ini_file($file);
         key_exists('key', $secret) && key_exists('lock', $secret) && strlen($secret['key']) === 32 && strlen($secret['lock']) === 67 || Exp::end('密钥文件异常');
@@ -30,7 +30,7 @@ class Safe
     static function secretInit()
     {
         Conf::init();
-        File::write(App . 'secret.ini', "key='" . md5(uniqid()) . "'\nlock='" . str_shuffle('0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ/=+_-') . "'");
+        File::write(APP . 'secret.ini', "key='" . md5(uniqid()) . "'\nlock='" . str_shuffle('0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ/=+_-') . "'");
     }
 
     // 正则验证
@@ -85,7 +85,7 @@ class Safe
         // 生成文字
         $_x = $width / $len;
         for ($i = 0; $i < $len; $i++) {
-            imagettftext($im, $size, mt_rand(-30, 30), $_x * $i + mt_rand(1, 5), $height / 1.4, imagecolorallocate($im, mt_rand(0, 156), mt_rand(0, 156), mt_rand(0, 156)), Csn_s . 'vcode.ttf', $str[$i]);
+            imagettftext($im, $size, mt_rand(-30, 30), $_x * $i + mt_rand(1, 5), $height / 1.4, imagecolorallocate($im, mt_rand(0, 156), mt_rand(0, 156), mt_rand(0, 156)), CSN_S . 'vcode.ttf', $str[$i]);
         }
         // 保存为对象
         $obj = new \StdClass();
@@ -158,14 +158,14 @@ class Safe
     // 生成登录ID
     static function eLoginId($str)
     {
-        return self::encode(TIME . '.' . chr(mt_rand(97, 122)) . '.' . $str);
+        return self::encode(CSN_TIME . '.' . chr(mt_rand(97, 122)) . '.' . $str);
     }
 
     // 登录ID解码
     static function dLoginId($loginId, $time = 7200)
     {
         $arr = explode('.', self::decode($loginId));
-        return count($arr) === 3 && is_numeric($t = $arr[0]) ? ($t <= TIME && $t + $time > TIME) ? $arr[2] : 0 : false;
+        return count($arr) === 3 && is_numeric($t = $arr[0]) ? ($t <= CSN_TIME && $t + $time > CSN_TIME) ? $arr[2] : 0 : false;
     }
 
     // 添加转义字符

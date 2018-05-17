@@ -17,18 +17,18 @@ class Conf
     {
         if (is_null(self::$init) || $force) {
             foreach (self::files() as $file) {
-                File::copy(Csn_s . $file . '.php', App . $file . '.php', $force);
+                File::copy(CSN_S . $file . '.php', APP . $file . '.php', $force);
             }
             self::$init = true;
         }
-        File::copies([Csn . '.htaccess' => Pub . '.htaccess', Csn . 'favicon.ico' => Pub . 'favicon.ico'], $force);
+        File::copies([CSN . '.htaccess' => PUB . '.htaccess', CSN . 'favicon.ico' => PUB . 'favicon.ico'], $force);
     }
 
     // 初始化默认项数组
     protected static function files()
     {
         if (is_null(self::$files)) {
-            $dir = dir(Csn_s);
+            $dir = dir(CSN_S);
             while (false !== ($path = $dir->read())) {
                 if ($path === '.' || $path === '..') continue;
                 self::$register[] = self::$files[] = substr($path, 0, -4);
@@ -49,7 +49,7 @@ class Conf
     // 获取配置项
     protected static function load($name)
     {
-        return key_exists($name, self::$conf) ? self::$conf[$name] : self::$conf[$name] = self::makeup(self::me($name), self::csn($name));
+        return key_exists($name, self::$conf) ? self::$conf[$name] : self::$conf[$name] = $name === 'data' ? self::me($name) : self::makeup(self::me($name), self::csn($name));
     }
 
     // 合并配置项
@@ -64,13 +64,13 @@ class Conf
     // 获取站点配置项数组
     protected static function me($name)
     {
-        return key_exists($name, self::$me) ? self::$me[$name] : (self::$me[$name] = Csn::inc(App . $name . '.php') ?: []);
+        return key_exists($name, self::$me) ? self::$me[$name] : (self::$me[$name] = Csn::inc(APP . $name . '.php') ?: []);
     }
 
     // 获取框架默认配置项数组
     protected static function csn($name)
     {
-        return key_exists($name, self::$csn) ? self::$csn[$name] : (self::$csn[$name] = Csn::inc(Csn_s . $name . '.php'));
+        return key_exists($name, self::$csn) ? self::$csn[$name] : (self::$csn[$name] = Csn::inc(CSN_S . $name . '.php'));
     }
 
     // 获取配置项具体信息

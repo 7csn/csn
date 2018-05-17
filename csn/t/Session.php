@@ -16,8 +16,8 @@ class Session
                 ini_set('session.save_handler', 'memcache');
                 ini_set('session.save_path', 'tcp://' . join(';tcp://', Conf::data('memcache.nodes')));
             } else {
-                File::mkDir(App_s);
-                ini_set('session.save_path', App_s);
+                File::mkDir(APP_S);
+                ini_set('session.save_path', APP_S);
             }
             foreach ($session['cookie'] as $set => $val) {
                 ini_set('session.' . $set, $val);

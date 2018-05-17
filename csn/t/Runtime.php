@@ -44,7 +44,7 @@ class Runtime
     {
         $log = self::get($name);
         if (!$log['set']) return;
-        $dir = App_r . str_replace('.', XG, $log['dir']) . XG;
+        $dir = APP_R . str_replace('.', XG, $log['dir']) . XG;
         if ($name === 'act') {
             $file = $dir . date('Ymd') . XG . Route::$define . XG . Route::$path . '.json';
             self::actSave($file);

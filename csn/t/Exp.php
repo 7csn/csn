@@ -47,7 +47,7 @@ class Exp
     // 获取错误信息
     protected static function info($error)
     {
-        return self::type($error[0]) . '：[ ' . $error[1] . ' ][ ' . str_replace(App, '', $error[2]) . ' ][ ' . $error[3] . ' ]';
+        return self::type($error[0]) . '：[ ' . $error[1] . ' ][ ' . str_replace(APP, '', $error[2]) . ' ][ ' . $error[3] . ' ]';
     }
 
     // 获取错误类型

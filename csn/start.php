@@ -1,39 +1,39 @@
 <?php
 
 // 初始内存
-define('S_MEM', memory_get_usage());
+define('CSN_MEM_START', memory_get_usage());
 
 // 当前时间戳
-define('TIME', $_SERVER['REQUEST_TIME']);
+define('CSN_TIME', $_SERVER['REQUEST_TIME']);
 
 // 初始时间
-define('START', $_SERVER['REQUEST_TIME_FLOAT']);
+define('CSN_START', $_SERVER['REQUEST_TIME_FLOAT']);
 
 // 目录分隔符
 define('XG', DIRECTORY_SEPARATOR);
 
 // 框架相关目录
-define('Csn', __DIR__ . XG);
-define('Csn_t', Csn . 't' . XG);
-define('Csn_s', Csn . 's' . XG);
-define('Csn_y', Csn . 'y' . XG);
-define('Csn_x', Csn . 'x' . XG);
+define('CSN', __DIR__ . XG);
+define('CSN_T', CSN . 't' . XG);
+define('CSN_S', CSN . 's' . XG);
+define('CSN_Y', CSN . 'y' . XG);
+define('CSN_X', CSN . 'x' . XG);
 
 // 项目相关目录
-define('Pub', realpath('.') . XG);
-define('App', dirname(Pub) . XG);
-define('App_c', App . 'controllers' . XG);
-define('App_m', App . 'models' . XG);
-define('App_v', App . 'views' . XG);
-define('App_s', App . 'session' . XG);
-define('App_r', App . 'runtime' . XG);
-define('App_t', App . 'template' . XG);
+define('PUB', realpath('.') . XG);
+define('APP', dirname(PUB) . XG);
+define('APP_C', APP . 'controllers' . XG);
+define('APP_M', APP . 'models' . XG);
+define('APP_V', APP . 'views' . XG);
+define('APP_S', APP . 'session' . XG);
+define('APP_R', APP . 'runtime' . XG);
+define('APP_T', APP . 'template' . XG);
 
 // 基于框架项目根目录
-define('Web', dirname(App) . XG);
+define('Web', dirname(APP) . XG);
 
 // 引入框架核心类文件
-include Csn_t . 'csn.php';
+include CSN_T . 'csn.php';
 
 // 自加载composer类库
 \csn\t\Csn::inc(Web . 'vendor' . XG . 'autoload.php');

@@ -22,8 +22,8 @@ class Request
     // 解析路由
     static function parse()
     {
-        File::copy(Csn_x . 'route.php', App . 'route.php');
-        Csn::inc(App . 'route.php');
+        File::copy(CSN_X . 'route.php', APP . 'route.php');
+        Csn::inc(APP . 'route.php');
         return Route::run(Route::path(self::path(), true));
     }
 

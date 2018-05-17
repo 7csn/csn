@@ -6,8 +6,8 @@ class Wx
 {
 
     protected static $wx = [];
-    protected static $jsapi_ticket = App . 'jsapi_ticket.json';
-    protected static $access_token = App . 'access_token.json';
+    protected static $jsapi_ticket = APP . 'jsapi_ticket.json';
+    protected static $access_token = APP . 'access_token.json';
 
     // 获取微信相关配置
     protected static function get($name = false)

@@ -12,17 +12,17 @@ class Csn
     // 加载类库
     protected static $load = ['app\m\\' => [], 'app\\' => [], 'csn\t\\' => [], 'csn\y\\' => []];
     // 文件引入相关信息
-    protected static $file = [Csn => 'csn', App => 'app', Web => 'web'];
+    protected static $file = [CSN => 'csn', APP => 'app', Web => 'web'];
     // 自动加载类相关信息
-    protected static $class = ['app\m\\' => App_m, 'app\\' => App, 'csn\t\\' => Csn_t, 'csn\y\\' => Csn_y];
+    protected static $class = ['app\m\\' => APP_M, 'app\\' => APP, 'csn\t\\' => CSN_T, 'csn\y\\' => CSN_Y];
 
     // 框架初始化
     static function init()
     {
         // 引入框架字母方法
-        self::inc(Csn_x . 'latin.php');
+        self::inc(CSN_X . 'latin.php');
         // 引入框架常用方法
-        self::inc(Csn_x . 'func.php');
+        self::inc(CSN_X . 'func.php');
         // 是否调试模式
         defined('T_S') || define('T_S', Conf::web('debug'));
         // 设置编码
@@ -63,7 +63,7 @@ class Csn
     {
         $name = ($m ? XG . $m : '') . XG . $c;
         key_exists($c, self::$act) && self::$act[$c]['name'] === $name && Exp::end('不能跨模块引入同名控制器');
-        self::inc(App_c . $name . '.php');
+        self::inc(APP_C . $name . '.php');
         $class = '\app\c\\' . $c;
         self::$act[$c] = ['name' => $name, 'class' => new $class()];
         return self::$act[$c]['class'];

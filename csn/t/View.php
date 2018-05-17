@@ -25,7 +25,7 @@ class View
         $path = self::path($names);
         is_null($time) && $time = self::cacheTime();
         $html = self::html($path);
-        return is_file($html) && filemtime($html) + $time >= TIME && ($outfile = self::compileOk($path, $names)) && filemtime($html) >= filemtime($outfile) ? $html : false;
+        return is_file($html) && filemtime($html) + $time >= CSN_TIME && ($outfile = self::compileOk($path, $names)) && filemtime($html) >= filemtime($outfile) ? $html : false;
     }
 
     // 视图对象
@@ -63,7 +63,7 @@ class View
         include $source;
         $content = ob_get_contents();
         ob_end_clean();
-        $time && (!is_file($html = self::html($path)) || filemtime($html) + $time < TIME) && File::write($html, $content, true);
+        $time && (!is_file($html = self::html($path)) || filemtime($html) + $time < CSN_TIME) && File::write($html, $content, true);
         return $content;
     }
 
@@ -263,13 +263,13 @@ class View
     // 视图目录
     protected static function viewDir()
     {
-        return is_null(self::$viewDir) ? self::$viewDir = App_v : self::$viewDir;
+        return is_null(self::$viewDir) ? self::$viewDir = APP_V : self::$viewDir;
     }
 
     // 编译静态目录
     protected static function templateDir($which)
     {
-        return key_exists($which, self::$templateDir) ? self::$templateDir[$which] : self::$templateDir[$which] = App_t . $which . XG;
+        return key_exists($which, self::$templateDir) ? self::$templateDir[$which] : self::$templateDir[$which] = APP_T . $which . XG;
     }
 
 }
