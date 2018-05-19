@@ -47,14 +47,14 @@ class Model
     // ------------------------------------------
 
     protected static $link = [];    // 数据库连接信息
-    protected static $dbns = [];    // 数据库当前库及默认库数组
+    protected static $dbn = [];     // 数据库当前库及默认库数组
 
     // 获取数据库相关信息
     protected static function node($address)
     {
         $link = Conf::data('model.link');
         if (key_exists($address, $link)) {
-            return $link;
+            return $link[$address];
         } else {
             Exp::end('数据库' . $address . '连接信息不存在');
         }
@@ -69,7 +69,7 @@ class Model
                 $node = self::node($address);
                 self::$link[$address] = new \PDO("mysql:host=$host;port=$port;dbname={$node['dbn']}", $node['du'], $node['dp']);
                 self::$link[$address]->query('SET NAMES utf8');
-                self::$dbns[$address] = ['dbn' => $node['dbn'], 'dbn_now' => null];
+                self::$dbn[$address] = ['dbn' => $node['dbn'], 'dbn_now' => null];
             } catch (\PDOException $e) {
                 Exp::end('[PDO]：' . str_replace("\n", '', iconv("GB2312// IGNORE", "UTF-8", $e->getMessage())));
             }
@@ -77,32 +77,104 @@ class Model
         return self::$link[$address];
     }
 
+    // 指定数据库
+    protected static function dbname($dbn = null)
+    {
+        
+    }
 
-//    protected static $link;     // 数据库链接
+    // ------------------------------------------
+    //  数据库操作
+    // ------------------------------------------
+
+    protected static $desc = [];    // 数据结构
+
+    // 获取表名
+    protected static function tbname()
+    {
+        return substr(strrchr(static::class, '\\'), 1);
+    }
+
+    // 查询封装
+    protected static function query($func, $style = \PDO::FETCH_OBJ)
+    {
+        $sqls = call_user_func($func, self::tbname());
+        $link = self::connect(self::slave());
+        if (is_array($sqls)) {
+            $sth = $link->prepare($sqls[0]);
+            $sth->execute($sqls[1]);
+        } else {
+            $sth = $link->query($sqls);
+        }
+        $sth->setFetchMode($style);
+        $res = [];
+        while ($v = $sth->fetch()) {
+            $res[] = $v;
+        }
+        $sth = null;
+        return $res;
+    }
+
+    // 修改封装
+    protected static function execute($func)
+    {
+        $sqls = call_user_func($func, self::tbname());
+        $link = self::connect(self::master());
+        return is_array($sqls) ? $link->prepare($sqls[0])->execute($sqls[1]) : $link->exec($sqls);
+    }
+
+    // 查询全部行
+    static function all($field = '*')
+    {
+        return self::query(function ($tbn) use ($field) {
+            $fields = '`' . (is_array($field) ? implode('`,`', $field) : $field) . '`';
+            return " SELECT $fields FROM `$tbn`; ";
+        });
+    }
+
+    // 查询表结构
+    static function desc()
+    {
+        $tbn = self::tbname();
+        return key_exists($tbn, self::$desc) ? self::$desc[$tbn] : self::$desc[$tbn] = (function () {
+            $desc = new \stdClass();
+            foreach (self::query(function ($tbn) {
+                return " DESC `$tbn`; ";
+            }) as $v) {
+                $desc->{$v->Field} = (function($row){
+                    unset($row->Field);
+                    return $row;
+                })($v);
+            }
+            return $desc;
+        })();
+    }
+
+    // 重置表建构
+    static function truncate()
+    {
+        return self::execute(function ($tbn) {
+            return " TRUNCATE TABLE `$tbn`; ";
+        });
+    }
+
+    // ------------------------------------------
+    //  对象
+    // ------------------------------------------
+
+    function __construct($tbn = null)
+    {
+
+    }
+
+
 //    protected $data = [];       // 对象属性
-//    protected $columns = [];    // 数据结构
 
-//    // 获取数据库链接
-//    protected static function link()
-//    {
-//        return is_null(self::$link) ? self::$link = Ds::db() : self::$link;
-//    }
 //
 //    // 查询
 //    static function find()
 //    {
 //        return self::name();
-//    }
-//
-//    // 查询全部行
-//    static function all($field = '*')
-//    {
-//    }
-//
-//    // 获取子类名
-//    static function name()
-//    {
-//        return substr(strrchr(static::class, '\\'), 1);
 //    }
 
 }
