@@ -46,9 +46,9 @@ class Model
     //  数据库连接
     // ------------------------------------------
 
-    protected static $link = [];    // 数据库连接信息
-    protected static $dbns = [];    // 数据库当前库及默认库数组
-    protected static $dbn;          // 当前数据库
+    protected static $links = [];   // 数据库连接信息
+    protected static $dbInfos = []; // 数据库当前库及默认库数组
+    static $dbn = false;             // 当前数据库
 
     // 获取数据库相关信息
     protected static function node($address)
@@ -64,36 +64,41 @@ class Model
     // 数据库连接
     protected static function connect($address)
     {
-        if (!key_exists($address, self::$link)) {
+        return key_exists($address, self::$links) ? self::$links[$address] : self::$links[$address] = (function () use ($address) {
             list($host, $port) = explode(':', $address);
             try {
                 $node = self::node($address);
-                self::$link[$address] = new \PDO("mysql:host=$host;port=$port;dbname={$node['dbn']}", $node['du'], $node['dp']);
-                self::$link[$address]->query('SET NAMES utf8');
-                self::$dbns[$address] = ['dbn' => $node['dbn'], 'dbn_now' => null];
+                $link = new \PDO("mysql:host=$host", $node['du'], $node['dp']);
+                self::$dbInfos[$address] = ['dbn' => $node['dbn'], 'dbn_now' => null];
             } catch (\PDOException $e) {
                 Exp::end('[PDO]：' . str_replace("\n", '', iconv("GB2312// IGNORE", "UTF-8", $e->getMessage())));
             }
-        }
-        return self::$link[$address];
+            return $link;
+        })();
     }
 
     // ------------------------------------------
-    //  增删改查封装
+    //  表SQL封装
     // ------------------------------------------
 
-    // 查询封装
-    protected static function query($func, $style = \PDO::FETCH_OBJ)
+    // 查询
+    protected static function query($func, $rArr = false)
     {
-        $sqls = call_user_func($func, self::tbname());
-        $link = self::connect(self::slave());
+        $sqls = call_user_func($func, self::tbn());
+        $link = self::dbn(self::slave());
         if (is_array($sqls)) {
             $sth = $link->prepare($sqls[0]);
             $sth->execute($sqls[1]);
         } else {
             $sth = $link->query($sqls);
         }
-        $sth->setFetchMode($style);
+        return self::res($sth, $rArr);
+    }
+
+    // 结果集
+    protected static function res(&$sth, $rArr = false)
+    {
+        $sth->setFetchMode($rArr ? \PDO::FETCH_ASSOC : \PDO::FETCH_OBJ);
         $res = [];
         while ($v = $sth->fetch()) {
             $res[] = $v;
@@ -102,40 +107,70 @@ class Model
         return $res;
     }
 
-    // 修改封装
+    // 修改
     protected static function execute($func)
     {
-        $sqls = call_user_func($func, self::tbname());
-        $link = self::connect(self::master());
+        $sqls = call_user_func($func, self::tbn());
+        $link = self::dbn(self::master());
         return is_array($sqls) ? $link->prepare($sqls[0])->execute($sqls[1]) : $link->exec($sqls);
     }
 
     // ------------------------------------------
-    //  数据库操作
+    //  类操作
     // ------------------------------------------
 
-    protected static $desc = [];    // 数据结构
+    protected static $descs = [];   // 数据结构
+    protected static $dbns = [];    // 数据库名列表
+
+    // 数据库匹配;返回连接
+    protected static function dbn($address)
+    {
+        $link = self::connect($address);
+        $dbInfo = self::$dbInfos[$address];
+        $dbn = self::$dbn ?: $dbInfo['dbn'];
+        if ($dbn !== $dbInfo['dbn_now']) {
+            in_array($dbn, self::dbns($link, $dbn)) ? $link->query(" USE `$dbn` ") : Exp::end('服务器 ' . $address . ' 不存在数据库 ' . $dbn);
+            self::$dbInfos[$address]['db_now'] = $dbn;
+        }
+        return $link;
+    }
+
+    // 获取数据库列表
+    protected static function dbns($link, $address)
+    {
+        return key_exists($address, self::$dbns) ? self::$dbns[$address] : self::$dbns[$address] = (function () use ($link) {
+            $sth = $link->query(" SHOW DATABASES ");
+            $dbns = [];
+            foreach (self::res($sth) as $v) {
+                $dbns[] = $v->Database;
+            }
+            return $dbns;
+        })();
+    }
 
     // 获取表名
-    protected static function tbname()
+    protected static function tbn()
     {
         return substr(strrchr(static::class, '\\'), 1);
     }
 
     // 查询表结构
-    static function desc()
+    protected static function desc()
     {
-        $tbn = self::tbname();
-        return key_exists($tbn, self::$desc) ? self::$desc[$tbn] : self::$desc[$tbn] = (function () {
+        $tbn = self::tbn();
+        return key_exists($tbn, self::$descs) ? self::$descs[$tbn] : self::$descs[$tbn] = (function () {
             $desc = new \stdClass();
+            $desc->list = new \stdClass();
             foreach (self::query(function ($tbn) {
-                return " DESC `$tbn`; ";
+                return " DESC `$tbn` ";
             }) as $v) {
-                $desc->{$v->Field} = (function($row){
+                $v->Key === 'PRI' && $primaryKey = $v->Field;
+                $desc->list->{$v->Field} = (function ($row) {
                     unset($row->Field);
                     return $row;
                 })($v);
             }
+            $desc->primaryKey = $primaryKey ?? null;
             return $desc;
         })();
     }
@@ -144,17 +179,17 @@ class Model
     static function truncate()
     {
         return self::execute(function ($tbn) {
-            return " TRUNCATE TABLE `$tbn`; ";
+            return " TRUNCATE TABLE `$tbn` ";
         });
     }
 
     // 查询全部行
-    static function all($field = '*')
+    static function all($field = '*', $rArr = false)
     {
         return self::query(function ($tbn) use ($field) {
             $fields = '`' . (is_array($field) ? implode('`,`', $field) : $field) . '`';
-            return " SELECT $fields FROM `$tbn`; ";
-        });
+            return " SELECT $fields FROM `$tbn` ";
+        }, $rArr);
     }
 
     // 条件
@@ -163,7 +198,12 @@ class Model
     }
 
     // ------------------------------------------
-    //  对象
+    //  确定对象
+    // ------------------------------------------
+
+
+    // ------------------------------------------
+    //  对象操作
     // ------------------------------------------
 
     protected $data = [];           // 对象属性
@@ -175,13 +215,16 @@ class Model
     }
 
     // 获取字段值
-    public function __get($key)
+    function __get($key)
     {
         return key_exists($key, $this->data) ? $this->data[$key] : null;
     }
 
 
-
+    static function test()
+    {
+        return substr(strrchr(static::class, '\\'), 1);
+    }
 
 //
 //    // 查询
