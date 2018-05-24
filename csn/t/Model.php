@@ -168,10 +168,16 @@ class Model
 
     protected $data = [];           // 对象属性
 
-    // 构造函数
-    function __construct()
+    // 设置字段值
+    function __set($key, $value)
     {
+        $this->data[$key] = $value;
+    }
 
+    // 获取字段值
+    public function __get($key)
+    {
+        return key_exists($key, $this->data) ? $this->data[$key] : null;
     }
 
 
