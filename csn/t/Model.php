@@ -9,46 +9,37 @@ class Model
     //  随机主从数据库地址
     // ------------------------------------------
 
-    protected static $ws;           // 写数据库地址数组
-    protected static $ms;           // 写读数据库地址关联数组
-    protected static $master;       // 写数据库地址
-    protected static $slave;        // 读数据库地址
-
     // 获取写数据地址库组
     protected static function writes()
     {
-        if (is_null(self::$ws)) {
-            list(self::$ws, self::$ms) = MS::init(Conf::data('model.nodes'));
+        if (is_null(DbInfo::$ws)) {
+            list(DbInfo::$ws, DbInfo::$ms) = MS::init(Conf::data('model.nodes'));
         }
-        return self::$ws;
+        return DbInfo::$ws;
     }
 
     // 获取写数据库地址
     protected static function master()
     {
-        return is_null(self::$master) ? self::$master = MS::rand(self::writes()) : self::$master;
+        return is_null(DbInfo::$master) ? DbInfo::$master = MS::rand(self::writes()) : DbInfo::$master;
     }
 
     // 获取读数据地址库组
     protected static function reads()
     {
-        is_null(self::$ms) && self::writes();
-        return self::$ms[self::master()];
+        is_null(DbInfo::$ms) && self::writes();
+        return DbInfo::$ms[self::master()];
     }
 
     // 获取读数据库地址
     protected static function slave()
     {
-        return is_null(self::$slave) ? self::$slave = MS::rand(self::reads()) : self::$slave;
+        return is_null(DbInfo::$slave) ? DbInfo::$slave = MS::rand(self::reads()) : DbInfo::$slave;
     }
 
     // ------------------------------------------
     //  数据库连接
     // ------------------------------------------
-
-    protected static $links = [];   // 数据库连接信息
-    protected static $dbInfos = []; // 数据库当前库及默认库数组
-    static $dbn = false;             // 当前数据库
 
     // 获取数据库相关信息
     protected static function node($address)
@@ -64,12 +55,12 @@ class Model
     // 数据库连接
     protected static function connect($address)
     {
-        return key_exists($address, self::$links) ? self::$links[$address] : self::$links[$address] = (function () use ($address) {
+        return key_exists($address, DbInfo::$links) ? DbInfo::$links[$address] : DbInfo::$links[$address] = (function () use ($address) {
             list($host, $port) = explode(':', $address);
             try {
                 $node = self::node($address);
                 $link = new \PDO("mysql:host=$host", $node['du'], $node['dp']);
-                self::$dbInfos[$address] = ['dbn' => $node['dbn'], 'dbn_now' => null];
+                DbInfo::$dbInfos[$address] = ['dbn' => $node['dbn'], 'dbn_now' => null];
             } catch (\PDOException $e) {
                 Exp::end('[PDO]：' . str_replace("\n", '', iconv("GB2312// IGNORE", "UTF-8", $e->getMessage())));
             }
@@ -85,7 +76,7 @@ class Model
     protected static function query($func, $rArr = false)
     {
         $sqls = call_user_func($func, self::tbn());
-        $link = self::dbn(self::slave());
+        $link = self::dbnConnect(self::slave());
         if (is_array($sqls)) {
             $sth = $link->prepare($sqls[0]);
             $sth->execute($sqls[1]);
@@ -111,7 +102,7 @@ class Model
     protected static function execute($func)
     {
         $sqls = call_user_func($func, self::tbn());
-        $link = self::dbn(self::master());
+        $link = self::dbnConnect(self::master());
         return is_array($sqls) ? $link->prepare($sqls[0])->execute($sqls[1]) : $link->exec($sqls);
     }
 
@@ -119,18 +110,18 @@ class Model
     //  类操作
     // ------------------------------------------
 
-    protected static $descs = [];   // 数据结构
-    protected static $dbns = [];    // 数据库名列表
+    static $dbn = false;                // 当前库名
+    static $tbn = false;                // 当前表名
 
     // 数据库匹配;返回连接
-    protected static function dbn($address)
+    protected static function dbnConnect($address)
     {
         $link = self::connect($address);
-        $dbInfo = self::$dbInfos[$address];
+        $dbInfo = DbInfo::$dbInfos[$address];
         $dbn = self::$dbn ?: $dbInfo['dbn'];
         if ($dbn !== $dbInfo['dbn_now']) {
             in_array($dbn, self::dbns($link, $dbn)) ? $link->query(" USE `$dbn` ") : Exp::end('服务器 ' . $address . ' 不存在数据库 ' . $dbn);
-            self::$dbInfos[$address]['db_now'] = $dbn;
+            DbInfo::$dbInfos[$address]['db_now'] = $dbn;
         }
         return $link;
     }
@@ -138,7 +129,7 @@ class Model
     // 获取数据库列表
     protected static function dbns($link, $address)
     {
-        return key_exists($address, self::$dbns) ? self::$dbns[$address] : self::$dbns[$address] = (function () use ($link) {
+        return key_exists($address, DbInfo::$dbns) ? DbInfo::$dbns[$address] : DbInfo::$dbns[$address] = (function () use ($link) {
             $sth = $link->query(" SHOW DATABASES ");
             $dbns = [];
             foreach (self::res($sth) as $v) {
@@ -148,17 +139,44 @@ class Model
         })();
     }
 
+    // 库名及表名初始化
+    protected static function names()
+    {
+        $class = static::class;
+        $class::$tbn || (function($class) {
+            if (strpos($class, 'app\\m\\') !== 0) {
+                Exp::end('数据库模型'.$class.'异常');
+            } else {
+                $arr = array_reverse(explode('\\', substr($class, 6)));
+                $count = count($arr);
+                if ($count === 0) {
+                    Exp::end('数据库模型'.$class.'异常');
+                } else {
+                    $class::$tbn = $arr[0];
+                    $class::$dbn = $arr[1] ?? false;
+                }
+            }
+        })($class);
+        return $class;
+    }
+
     // 获取表名
     protected static function tbn()
     {
-        return substr(strrchr(static::class, '\\'), 1);
+        return self::names()::$tbn;
+    }
+
+    // 获取库名
+    protected static function dbn()
+    {
+        return self::names()::$dbn;
     }
 
     // 查询表结构
     protected static function desc()
     {
         $tbn = self::tbn();
-        return key_exists($tbn, self::$descs) ? self::$descs[$tbn] : self::$descs[$tbn] = (function () {
+        return key_exists($tbn, DbInfo::$descs) ? DbInfo::$descs[$tbn] : DbInfo::$descs[$tbn] = (function () {
             $desc = new \stdClass();
             $desc->list = new \stdClass();
             foreach (self::query(function ($tbn) {
@@ -187,7 +205,7 @@ class Model
     static function all($field = '*', $rArr = false)
     {
         return self::query(function ($tbn) use ($field) {
-            $fields = '`' . (is_array($field) ? implode('`,`', $field) : $field) . '`';
+            $fields = is_array($field) ? '`' . implode('`,`', $field) . '`' : $field;
             return " SELECT $fields FROM `$tbn` ";
         }, $rArr);
     }
