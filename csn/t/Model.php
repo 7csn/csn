@@ -72,11 +72,15 @@ class Model extends Data
     //  表SQL封装
     // ----------------------------------------------------------------------
 
+    // SQL语句
+    protected static $sqls;
+
     // 查询
     static function query($func, $rArr = false, $tbn = null)
     {
         $sqls = call_user_func($func, is_null($tbn) ? self::tbn() : $tbn);
-        $address = self::getTransaction() ? self::master() : self::slave();
+        self::$sqls = $sqls;
+        $address = DbInfo::getTransaction() ? self::master() : self::slave();
         $link = self::dbnConnect($address);
         if (is_array($sqls)) {
             $sth = $link->prepare($sqls[0]);
@@ -104,7 +108,14 @@ class Model extends Data
     {
         $sqls = call_user_func($func, self::tbn());
         $link = self::dbnConnect(self::master());
+        self::$sqls = $sqls;
         return is_array($sqls) ? $link->prepare($sqls[0])->execute($sqls[1]) : $link->exec($sqls);
+    }
+
+    // 获取SQL语句
+    static function sqls()
+    {
+        return self::$sqls;
     }
 
     // ----------------------------------------------------------------------
@@ -153,8 +164,8 @@ class Model extends Data
                 if ($count === 0) {
                     Exp::end('数据库模型' . $class . '异常');
                 } else {
-                    $class::$tbn = $arr[0];
-                    $class::$dbn = $arr[1] ?? false;
+                    $class::$tbn = strtolower($arr[0]);
+                    $class::$dbn = key_exists(1, $arr) ? strtolower($arr[1]) : false;
                 }
             }
         })($class);
@@ -267,9 +278,9 @@ class Model extends Data
     {
         $link = self::connect(self::master());
         $link->beginTransaction();
-        self::setTransaction(true);
+        DbInfo::setTransaction(true);
         $link->{($res = call_user_func($func, $link)) ? 'rollBack' : 'commit'}();
-        self::setTransaction();
+        DbInfo::setTransaction();
         return $res;
     }
 
@@ -300,7 +311,7 @@ class Model extends Data
     }
 
     // 指定条件对象
-    private function parse()
+    protected function parse()
     {
         $this->parse = new Data();
         return $this;
@@ -314,9 +325,9 @@ class Model extends Data
     }
 
     // 关联表
-    function join($join, $alias = null, $type = 'left')
+    function join($join, $alias = null, $type = 'inner')
     {
-        $this->parse->join = is_null($this->parse->join) ? [$type, [$join, $alias]] : array_merge($this->parse->join, [$type, [$join, $alias]]);
+        is_null($this->parse->join) ? $this->parse->join = [[strtoupper($type), $join, $alias]] : $this->parse->join[] = [strtoupper($type), $join, $alias];
         return $this;
     }
 
@@ -376,9 +387,13 @@ class Model extends Data
     }
 
     // 限制
-    function limit($limit)
+    function limit($from, $num = null)
     {
-        $this->parse->limit = $limit;
+        if (is_null($num)) {
+            $num = $from;
+            $from = 0;
+        }
+        $this->parse->limit = [$from, $num];
         return $this;
     }
 
@@ -447,7 +462,8 @@ class Model extends Data
     // 查单行
     function find($type = \PDO::FETCH_OBJ)
     {
-        $this->parse->limit = is_null($limit = $this->parse->limit) ? 1 : ((is_array($limit) ? implode(',', $limit) : $limit) ?: ($i = strpos($limit, ',')) === false ? 1 : (substr($limit, 0, $i + 1) . '1'));
+        $limit = $this->parse->limit;
+        $this->parse->limit = is_null($limit) ? 1 : [$limit[0], 1];
         $rm = new \ReflectionMethod($this, 'select');
         $res = $rm->invokeArgs($this, func_get_args());
         return current($res) ?: [];
@@ -497,15 +513,18 @@ class Model extends Data
     // 表处理
     protected function parseTable()
     {
+        echo '<pre>';
+        var_dump($this->parse->data);
         $tbs = ' `' . self::tbn() . '`' . ($this->parse->alias ? " as `{$this->parse->alias}`" : '');
         $tbArr = [self::tbn()];
         $joins = $this->parse->join;
         if (is_array($joins)) {
-            foreach ($joins as $type => $join) {
-                $tbs .= " $type JOIN `{$join[0]}`" . (is_null($join[1]) ? '' : " as {$join[1]}");
-                $tbArr[] = $join[0];
+            foreach ($joins as $join) {
+                $tbs .= " {$join[0]} JOIN `{$join[1]}`" . (is_null($join[2]) ? '' : " as `{$join[2]}`");
+                $tbArr[] = $join[1];
             }
         }
+        var_dump($tbArr);
         $this->parse->table = $tbArr;
         return $tbs;
     }
@@ -513,7 +532,7 @@ class Model extends Data
     // 条件数组处理
     protected function parseWhere()
     {
-        return empty($where = $this->parse->where) ? ' WHERE ' . (is_array($where) ? implode(' ', $where) : $where) : '';
+        return ($where = $this->parse->where) ? ' WHERE ' . (is_array($where) ? implode(' ', $where) : $where) : '';
     }
 
     // 字段数组处理

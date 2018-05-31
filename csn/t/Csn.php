@@ -11,7 +11,7 @@ class Csn
     // 加载类库
     protected static $load = ['app\m\\' => [], 'app\\' => [], 'csn\t\\' => [], 'csn\y\\' => []];
     // 文件引入相关信息
-    protected static $file = [CSN => 'csn', APP => 'app', Web => 'web'];
+    protected static $file = [CSN => 'csn', APP => 'app', WEB => 'web'];
     // 自动加载类相关信息
     protected static $class = ['app\m\\' => APP_M, 'app\\' => APP, 'csn\t\\' => CSN_T, 'csn\y\\' => CSN_Y];
 

@@ -30,13 +30,13 @@ define('APP_R', APP . 'runtime' . XG);
 define('APP_T', APP . 'template' . XG);
 
 // 基于框架项目根目录
-define('Web', dirname(APP) . XG);
+define('WEB', dirname(APP) . XG);
 
 // 引入框架核心类文件
 include CSN_T . 'csn.php';
 
 // 自加载composer类库
-\csn\t\Csn::inc(Web . 'vendor' . XG . 'autoload.php');
+\csn\t\Csn::inc(WEB . 'vendor' . XG . 'autoload.php');
 
 // 自加载框架、项目类
 spl_autoload_register('\csn\t\Csn::load');
