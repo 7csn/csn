@@ -363,6 +363,13 @@ class Model extends Data
         return $this;
     }
 
+    // 条件(进一步筛选)
+    function having($having, $bind = null)
+    {
+        empty($having) || ($this->bind($bind)->parse->having = $having);
+        return $this;
+    }
+
     // 预编译
     function bind($bind)
     {
@@ -458,7 +465,7 @@ class Model extends Data
     // 查多行
     function select($type = \PDO::FETCH_OBJ)
     {
-        $sql = 'SELECT' . $this->parseSql('field') . ' FROM' . $this->parseTable() . $this->parseSql('on') . $this->parseWhere() . $this->parseSql('group') . $this->parseSql('order') . $this->parseSql('limit');
+        $sql = 'SELECT' . $this->parseSql('field') . ' FROM' . $this->parseTable() . $this->parseSql('on') . $this->parseWhere() . $this->parseHaving() . $this->parseSql('group') . $this->parseSql('order') . $this->parseSql('limit');
         $bind = $this->parse->bind;
         $arr = self::query(function () use ($sql, $bind) {
             return is_null($bind) ? $sql : [$sql, $bind];
@@ -537,6 +544,12 @@ class Model extends Data
     protected function parseWhere()
     {
         return ($where = $this->parse->where) ? ' WHERE ' . (is_array($where) ? implode(' ', $where) : $where) : '';
+    }
+
+    // 二次筛选条件数组处理
+    protected function parseHaving()
+    {
+        return ($having = $this->parse->having) ? ' HAVING ' . (is_array($having) ? implode(' ', $having) : $having) : '';
     }
 
     // 字段数组处理
