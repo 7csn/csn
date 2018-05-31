@@ -412,7 +412,7 @@ class Model extends Data
         $this->field($field);
         $bind = $this->parse->bind;
         $set = [];
-        foreach ($this->parseField() as $k => $v) {
+        foreach (current($this->parseField()) as $k => $v) {
             $set[] = $k . ' = :' . $k . '__';
             $bind[$k . '__'] = is_array($v) ? serialize($v) : $v;
         }
@@ -459,10 +459,9 @@ class Model extends Data
     {
         $link = self::connect(self::master());
         $link->beginTransaction();
-        Csn::setTransaction(true);
-        $res = call_user_func($func, $link);
-        $link->{$res ? 'rollBack' : 'commit'}();
-        Csn::setTransaction();
+        self::setTransaction(true);
+        $link->{($res = call_user_func($func, $link)) ? 'rollBack' : 'commit'}();
+        self::setTransaction();
         return $res;
     }
 
@@ -493,21 +492,21 @@ class Model extends Data
     }
 
     // 字段数组处理
-    protected function parseField($insert = true)
+    protected function parseField()
     {
         // 获取所有表结构
         $tbInfos = [];
         foreach ($this->parse->table as $v) {
             $tbInfos[] = self::desc($v);
         }
-        // 二位字段数组
+        // 二维字段数组
         $fieldArr = [];
         $fields = is_array(current($field = $this->parse->field)) ? $field : [$field];
         foreach ($fields as $field) {
             $arr = [];
             foreach ($tbInfos as $tbInfo) {
                 foreach ($tbInfo->list as $k => $v) {
-                    $v['Extra'] === 'auto_increment' || key_exists($k, $field) && $arr[$k] = self::$strict ? $field[$k] : self::parseValue($field[$k]);
+                    $v->Extra === 'auto_increment' || key_exists($k, $field) && $arr[$k] = self::$strict ? $field[$k] : self::parseValue($field[$k]);
                 }
             }
             $fieldArr[] = $arr;

@@ -22,10 +22,29 @@ class DbInfo
     static $dbInfos = []; // 数据库当前库及默认库数组
 
     // ------------------------------------------
-    //  类操作
+    //  库表信息
     // ------------------------------------------
 
     static $descs = [];   // 数据结构
     static $dbns = [];    // 数据库名列表
+
+    // ------------------------------------------
+    //  事务状态
+    // ------------------------------------------
+
+    // 是否处于事务
+    protected static $transaction = false;
+
+    // 获取事务状态
+    static function getTransaction()
+    {
+        return self::$transaction;
+    }
+
+    // 修改事务状态
+    static function setTransaction($status = false)
+    {
+        self::$transaction = $status;
+    }
 
 }

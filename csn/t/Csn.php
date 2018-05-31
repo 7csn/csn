@@ -8,7 +8,6 @@ class Csn
     protected static $inc = [];              // 加载文件
     protected static $obj = [];              // 模型文件
     protected static $act = [];              // 控制器文件
-    protected static $transaction = false;  // 数据库事务
     // 加载类库
     protected static $load = ['app\m\\' => [], 'app\\' => [], 'csn\t\\' => [], 'csn\y\\' => []];
     // 文件引入相关信息
@@ -137,18 +136,6 @@ class Csn
                 header('Content-Type:application/json');
                 return is_string($back) ? $back : json_encode($back);
         }
-    }
-
-    // 获取事务状态
-    static function getTransaction()
-    {
-        return self::$transaction;
-    }
-
-    // 修改事务状态
-    static function setTransaction($status = false)
-    {
-        self::$transaction = $status;
     }
 
 }

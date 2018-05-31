@@ -35,7 +35,7 @@ class Exp
     static function error($code, $msg, $file, $line)
     {
         self::$error[] = [$code, $msg, $file, $line];
-        Csn::getTransaction() || self::run();
+        DbInfo::getTransaction() || self::run();
     }
 
     // 自定义异常处理
