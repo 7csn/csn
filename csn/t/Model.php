@@ -349,6 +349,13 @@ class Model extends Data
         return $this->join($join, $alias, 'right');
     }
 
+    // 关联条件
+    function on($on)
+    {
+        empty($on) || $this->parse->field = $on;
+        return $this;
+    }
+
     // 条件
     function where($where, $bind = null)
     {
@@ -425,7 +432,7 @@ class Model extends Data
     // 删
     function delete()
     {
-        $sql = 'DELETE FROM' . $this->parseTable() . $this->parseWhere() . $this->parseSql('group') . $this->parseSql('order') . $this->parseSql('limit');
+        $sql = 'DELETE FROM' . $this->parseTable() . $this->parseSql('on') . $this->parseWhere() . $this->parseSql('group') . $this->parseSql('order') . $this->parseSql('limit');
         $bind = $this->parse->bind;
         return self::execute(function () use ($sql, $bind) {
             return is_null($bind) ? $sql : [$sql, $bind];
@@ -442,7 +449,7 @@ class Model extends Data
             $set[] = $k . ' = :' . $k . '__';
             $bind[$k . '__'] = is_array($v) ? serialize($v) : $v;
         }
-        $sql = 'UPDATE' . $this->parseTable() . ' SET ' . implode(',', $set) . $this->parseWhere() . $this->parseSql('group') . $this->parseSql('order') . $this->parseSql('limit');
+        $sql = 'UPDATE' . $this->parseTable() . $this->parseSql('on') . ' SET ' . implode(',', $set) . $this->parseWhere() . $this->parseSql('group') . $this->parseSql('order') . $this->parseSql('limit');
         return self::execute(function () use ($sql, $bind) {
             return is_null($bind) ? $sql : [$sql, $bind];
         });
@@ -451,7 +458,7 @@ class Model extends Data
     // 查多行
     function select($type = \PDO::FETCH_OBJ)
     {
-        $sql = 'SELECT' . $this->parseSql('field') . ' FROM' . $this->parseTable() . $this->parseWhere() . $this->parseSql('group') . $this->parseSql('order') . $this->parseSql('limit');
+        $sql = 'SELECT' . $this->parseSql('field') . ' FROM' . $this->parseTable() . $this->parseSql('on') . $this->parseWhere() . $this->parseSql('group') . $this->parseSql('order') . $this->parseSql('limit');
         $bind = $this->parse->bind;
         $arr = self::query(function () use ($sql, $bind) {
             return is_null($bind) ? $sql : [$sql, $bind];
@@ -561,6 +568,9 @@ class Model extends Data
         $val = $this->parse->$key;
         if ($val) {
             switch ($key) {
+                case 'on':
+                    $i = 'ON ';
+                    break;
                 case 'field':
                     $i = '';
                     break;
