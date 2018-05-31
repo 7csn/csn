@@ -513,8 +513,6 @@ class Model extends Data
     // 表处理
     protected function parseTable()
     {
-        echo '<pre>';
-        var_dump($this->parse->data);
         $tbs = ' `' . self::tbn() . '`' . ($this->parse->alias ? " as `{$this->parse->alias}`" : '');
         $tbArr = [self::tbn()];
         $joins = $this->parse->join;
@@ -524,7 +522,6 @@ class Model extends Data
                 $tbArr[] = $join[1];
             }
         }
-        var_dump($tbArr);
         $this->parse->table = $tbArr;
         return $tbs;
     }
