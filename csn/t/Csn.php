@@ -77,7 +77,7 @@ class Csn
         $name = str_replace('\\', XG, str_replace($type, '', $class));
         $file = $res[1] . $name . '.php';
         in_array($name, self::$load[$type]) && Exp::end('类' . $class . '异常');
-        is_file($file) ? include $file : die('找不到类' . $class);
+        is_file($file) ? include $file : Exp::end('找不到类' . $class);
         self::$load[$type][] = $name;
     }
 
