@@ -38,13 +38,13 @@ class DbInfo
     // 获取事务状态
     static function getTransaction()
     {
-        return self::$transaction;
+        return DbInfo::$transaction;
     }
 
     // 修改事务状态
     static function setTransaction($status = false)
     {
-        self::$transaction = $status;
+        DbInfo::$transaction = $status;
     }
 
 }

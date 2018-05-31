@@ -76,7 +76,8 @@ class Model extends Data
     static function query($func, $rArr = false, $tbn = null)
     {
         $sqls = call_user_func($func, is_null($tbn) ? self::tbn() : $tbn);
-        $link = self::dbnConnect(self::slave());
+        $address = self::getTransaction() ? self::master() : self::slave();
+        $link = self::dbnConnect($address);
         if (is_array($sqls)) {
             $sth = $link->prepare($sqls[0]);
             $sth->execute($sqls[1]);
@@ -110,7 +111,6 @@ class Model extends Data
     //  库、表、字段信息
     // ----------------------------------------------------------------------
 
-    protected static $strict = false;      // 字段严格模式
     protected static $tbn = false;         // 当前表名
     protected static $dbn = false;         // 当前库名
 
@@ -262,6 +262,17 @@ class Model extends Data
         });
     }
 
+    // 事务
+    static function transaction($func)
+    {
+        $link = self::connect(self::master());
+        $link->beginTransaction();
+        self::setTransaction(true);
+        $link->{($res = call_user_func($func, $link)) ? 'rollBack' : 'commit'}();
+        self::setTransaction();
+        return $res;
+    }
+
     // ----------------------------------------------------------------------
     //  静态指定对象
     // ----------------------------------------------------------------------
@@ -272,10 +283,10 @@ class Model extends Data
         return (is_null($obj) || !($obj instanceof self)) ? new self($where, $bind) : $obj->where($where)->bind($bind);
     }
 
-    static function assign($id)
+    static function assign($id, $obj = null)
     {
         list($primaryKey, $id) = self::primaryKey($id);
-        return self::which(" `$primaryKey` = :id ", [':id' => $id]);
+        return self::which(" `$primaryKey` = :id ", [':id' => $id], $obj);
     }
 
     // ----------------------------------------------------------------------
@@ -434,7 +445,7 @@ class Model extends Data
     }
 
     // 查单行
-    function find($type = \PDO::FETCH_OBJ, $close = false)
+    function find($type = \PDO::FETCH_OBJ)
     {
         $this->parse->limit = is_null($limit = $this->parse->limit) ? 1 : ((is_array($limit) ? implode(',', $limit) : $limit) ?: ($i = strpos($limit, ',')) === false ? 1 : (substr($limit, 0, $i + 1) . '1'));
         $rm = new \ReflectionMethod($this, 'select');
@@ -443,26 +454,40 @@ class Model extends Data
     }
 
     // 查单字段值
-    function one($field = null, $close = false)
+    function one($field = null)
     {
-        if (is_bool($field)) {
-            $close = $field;
-            $field = null;
-        }
         is_null($field) || $this->field($field);
-        $find = $this->find(\PDO::FETCH_OBJ, $close);
+        $find = $this->find(\PDO::FETCH_OBJ);
         return is_null($field) ? current($find) ?: null : (key_exists($field, $find) ? $find[$field] : null);
     }
 
-    // 事务
-    function transaction($func)
+    // ----------------------------------------------------------------------
+    //  表操作(AR增强)
+    // ----------------------------------------------------------------------
+
+    // 收集表单数据
+    function create()
     {
-        $link = self::connect(self::master());
-        $link->beginTransaction();
-        self::setTransaction(true);
-        $link->{($res = call_user_func($func, $link)) ? 'rollBack' : 'commit'}();
-        self::setTransaction();
-        return $res;
+        $desc = self::desc();
+        $primaryKey = $desc->primaryKey;
+        foreach ($desc->list as $k => $v) {
+            if ($k === $primaryKey) continue;
+            $this->$k = key_exists($k, $_REQUEST) ? null : $_REQUEST[$k];
+        }
+    }
+
+    // 增加行
+    function add($data = null)
+    {
+        is_null($data) && $data = $this->data;
+        return $this->insert($data);
+    }
+
+    // 修改行
+    function save($id = null)
+    {
+        is_null($id) || self::assign($id, $this);
+        return $this->update($this->data);
     }
 
     // ----------------------------------------------------------------------
@@ -506,7 +531,7 @@ class Model extends Data
             $arr = [];
             foreach ($tbInfos as $tbInfo) {
                 foreach ($tbInfo->list as $k => $v) {
-                    $v->Extra === 'auto_increment' || key_exists($k, $field) && $arr[$k] = self::$strict ? $field[$k] : self::parseValue($field[$k]);
+                    $v->Extra === 'auto_increment' || key_exists($k, $field) && $arr[$k] = self::parseValue($field[$k]);
                 }
             }
             $fieldArr[] = $arr;
