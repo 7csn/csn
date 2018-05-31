@@ -33,7 +33,7 @@ define('APP_T', APP . 'template' . XG);
 define('WEB', dirname(APP) . XG);
 
 // 引入框架核心类文件
-include CSN_T . 'csn.php';
+include CSN_T . 'Csn.php';
 
 // 自加载composer类库
 \csn\t\Csn::inc(WEB . 'vendor' . XG . 'autoload.php');
