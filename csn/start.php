@@ -22,9 +22,9 @@ define('CSN_X', CSN . 'x' . XG);
 // 项目相关目录
 define('PUB', realpath('.') . XG);
 define('APP', dirname(PUB) . XG);
-define('APP_C', APP . 'controllers' . XG);
 define('APP_M', APP . 'models' . XG);
 define('APP_V', APP . 'views' . XG);
+define('APP_C', APP . 'controllers' . XG);
 define('APP_S', APP . 'session' . XG);
 define('APP_R', APP . 'runtime' . XG);
 define('APP_T', APP . 'template' . XG);

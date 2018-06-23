@@ -5,7 +5,8 @@ namespace csn\t;
 class Data
 {
 
-    protected $data = [];       // 数据集合
+    // 数据集合
+    protected $data = [];
 
     // 获取全部数据
     function whole()

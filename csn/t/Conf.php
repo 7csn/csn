@@ -5,14 +5,14 @@ namespace csn\t;
 class Conf
 {
 
-    protected static $init;             // 初始化站点配置文件
+    protected static $init;             // 初始化项目配置文件
     protected static $conf = [];        // 配置信息
-    protected static $me = [];          // 站点配置信息
+    protected static $me = [];          // 项目配置信息
     protected static $csn = [];         // 框架默认配置信息
     protected static $files;            // 默认配置项数组
     protected static $register;         // 配置文件名方法注册数组
 
-    // 初始化站点配置文件
+    // 初始化项目配置文件
     static function init($force = false)
     {
         if (is_null(self::$init) || $force) {
@@ -61,7 +61,7 @@ class Conf
         return $to;
     }
 
-    // 获取站点配置项数组
+    // 获取项目配置项数组
     protected static function me($name)
     {
         return key_exists($name, self::$me) ? self::$me[$name] : (self::$me[$name] = Csn::inc(APP . $name . '.php') ?: []);

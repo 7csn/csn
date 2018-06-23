@@ -23,14 +23,13 @@ class Safe
         $file = APP . 'secret.ini';
         is_file($file) || Exp::end('未检测到密钥文件，请先创建');
         $secret = parse_ini_file($file);
-        key_exists('key', $secret) && key_exists('lock', $secret) && strlen($secret['key']) === 32 && strlen($secret['lock']) === 67 || Exp::end('密钥文件异常');
+        key_exists('key', $secret) && key_exists('lock', $secret) && strlen($secret['key']) === 32 && strlen($secret['lock']) === 58 || Exp::end('密钥文件异常');
     }
 
     // 初始化密钥
     static function secretInit()
     {
-        Conf::init();
-        File::write(APP . 'secret.ini', "key='" . md5(uniqid()) . "'\nlock='" . str_shuffle('0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ/=+_-') . "'");
+        File::write(APP . 'secret.ini', "key='" . md5(uniqid()) . "'\nlock='" . str_shuffle(Conf::web('base58')) . "'");
     }
 
     // 正则验证
@@ -222,6 +221,73 @@ class Safe
         } else {
             return is_string($data) ? htmlspecialchars_decode(stripSlashes($data)) : $data;
         }
+    }
+
+    static function en58($str)
+    {
+        // 加密条件：非空字符串
+        if (is_string($str) === false || strlen($str) === 0) return $str;
+        // 不重复密锁串
+        $lock = self::get('lock');
+        $len = strlen($lock);
+        // 字符串无符号解包数组值数组
+        $bytes = array_values(unpack('C*', $str));
+        // 数组元素256倍降幂总和(不计前0位)
+        $num256 = $bytes[0];
+        for ($i = 1, $l = count($bytes); $i < $l; $i++) {
+            // 大数字操作：和、积
+            $num256 = bcadd(bcmul($num256, 256), $bytes[$i]);
+        }
+        $res = '';
+        //
+        while ($num256 >= $len) {
+            // 大数字操作：取余
+            $res = $lock[bcmod($num256, $len)] . $res;
+            // 大数字操作：商(保留0位小数)
+            $num256 = bcdiv($num256, $len, 0);
+        }
+        $res = $lock[$num256] . $res;
+        // 数组前0元素补充
+        foreach ($bytes as $byte) {
+            if ($byte !== 0) break;
+            $res = $lock[0] . $res;
+        }
+        // $lock[0]... $lock[...]...
+        return (string)$res;
+    }
+
+    static function de58($str)
+    {
+        // 解密条件：非空字符串
+        if (is_string($str) === false || strlen($str) === 0) return $str;
+        // 密锁串分割数组并交换键值
+        $lock = array_flip(str_split(self::get('lock')));
+        $len = count($lock);
+        // 字符串分割数组
+        $chars = str_split($str);
+        // 验证加密字符串合法性
+        foreach ($chars as $char) {
+            if (!key_exists($char, $lock)) return false;
+        }
+        // 字符组元素密钥长度降幂总和
+        $num256 = $lock[$chars[0]];
+        for ($i = 1, $l = count($chars); $i < $l; $i++) {
+            // 大数字操作：和、积
+            $num256 = bcadd(bcmul($num256, $len), $lock[$chars[$i]]);
+        }
+        $res = '';
+        while ($num256 > 0) {
+            $res = pack('C', bcmod($num256, 256)) . $res;
+            $num256 = bcdiv($num256, 256, 0);
+        }
+        foreach ($chars as $char) {
+            if ($lock[$char] === 0) {
+                $res = "\x00" . $res;
+                continue;
+            }
+            break;
+        }
+        return $res;
     }
 
 }

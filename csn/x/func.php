@@ -1,7 +1,6 @@
 <?php
 
 namespace app\c;
-
 // 缓存
 function system($name, $func = null) {
     static $system = [];

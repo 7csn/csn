@@ -18,6 +18,13 @@ class Request
     static protected $ip;
     static protected $get;
     static protected $post;
+    static protected $obj;
+
+    // 实例
+    static function instance()
+    {
+        return is_null(self::$obj) ? self::$obj = new self : self::$obj;
+    }
 
     // 解析路由
     static function parse()
@@ -38,16 +45,16 @@ class Request
     {
         if (is_null(self::$uri)) {
             $SCRIPT_NAME = $_SERVER['SCRIPT_NAME'];
-            $i = strrpos($SCRIPT_NAME, '/');
+            $index = strrpos($SCRIPT_NAME, '/');
             // 网址入口目录
-            define('PRE_F', substr($SCRIPT_NAME, 0, $i));
+            define('PRE_F', substr($SCRIPT_NAME, 0, $index));
             // 网址前缀入口
             define('PRE_B', Conf::web('rewrite') ? PRE_F : $SCRIPT_NAME);
-            $me = substr($SCRIPT_NAME, $i);
-            $l = strlen($me);
+            $me = substr($SCRIPT_NAME, $index);
+            $len = strlen($me);
             $uri = isset($_SERVER['REQUEST_URI']) ? $_SERVER['REQUEST_URI'] : $_SERVER['PHP_SELF'] . (isset($_SERVER['argv']) ? $_SERVER['argv'][0] : $_SERVER['QUERY_STRING']);
-            substr($uri, 0, $i) === PRE_F && $uri = substr($uri, $i);
-            substr($uri, 0, $l) === $me && $uri = substr($uri, $l);
+            substr($uri, 0, $index) === PRE_F && $uri = substr($uri, $index);
+            substr($uri, 0, $len) === $me && $uri = substr($uri, $len);
             self::$uri = $uri;
         }
         return ($pre ? PRE_B : '') . self::$uri;

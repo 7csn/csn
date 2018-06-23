@@ -104,6 +104,7 @@ class Exp
     // 生产模式显示信息
     static function close($info, $go = '')
     {
+        $info === 'Csn-tsyx' && Conf::init();
         self::table();
         echo "<table class='table'><tr/><tr><td><div class='div'>{$info}</div></td></tr><tr/><tr/></table>$go";
         return self::me();

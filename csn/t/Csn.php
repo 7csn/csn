@@ -30,6 +30,8 @@ class Csn
         date_default_timezone_set(Conf::web('timezone'));
         // 路由分隔符
         define('SP', Conf::web('separator'));
+        // 项目配置初始化
+        defined('CT') && Conf::init();
         // 获取浏览器信息
         define('UA', isset($_SERVER['HTTP_USER_AGENT']) ? $_SERVER['HTTP_USER_AGENT'] : null);
     }
@@ -37,15 +39,8 @@ class Csn
     // 启动框架
     static function run()
     {
-        defined('CT') && Safe::secretInit();
+        Safe::secretInit();
         exit(Request::parse() . '');
-    }
-
-    // 控制台命令
-    static function cmd()
-    {
-        global $argc, $argv;
-        \app\c\V($argc, $argv);
     }
 
     // 获取框架模型、外调模型、项目模型
