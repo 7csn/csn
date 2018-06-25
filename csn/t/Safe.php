@@ -232,14 +232,14 @@ class Safe
         $len = strlen($lock);
         // 字符串无符号解包数组值数组
         $bytes = array_values(unpack('C*', $str));
-        // 数组元素256倍降幂总和(不计前0位)
+        // 数组元素256倍升幂
         $num256 = $bytes[0];
         for ($i = 1, $l = count($bytes); $i < $l; $i++) {
             // 大数字操作：和、积
             $num256 = bcadd(bcmul($num256, 256), $bytes[$i]);
         }
         $res = '';
-        //
+        // 密锁长度倍降幂字符串
         while ($num256 >= $len) {
             // 大数字操作：取余
             $res = $lock[bcmod($num256, $len)] . $res;
@@ -269,17 +269,19 @@ class Safe
         foreach ($chars as $char) {
             if (!key_exists($char, $lock)) return false;
         }
-        // 字符组元素密钥长度降幂总和
+        // 字符组元素密钥长度升幂
         $num256 = $lock[$chars[0]];
         for ($i = 1, $l = count($chars); $i < $l; $i++) {
             // 大数字操作：和、积
             $num256 = bcadd(bcmul($num256, $len), $lock[$chars[$i]]);
         }
         $res = '';
+        // 256倍降幂还原字符串
         while ($num256 > 0) {
             $res = pack('C', bcmod($num256, 256)) . $res;
             $num256 = bcdiv($num256, 256, 0);
         }
+        //
         foreach ($chars as $char) {
             if ($lock[$char] === 0) {
                 $res = "\x00" . $res;
