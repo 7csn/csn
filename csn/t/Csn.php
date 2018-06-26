@@ -1,6 +1,6 @@
 <?php
 
-namespace csn\t;
+namespace csn;
 
 class Csn
 {
@@ -9,11 +9,11 @@ class Csn
     protected static $obj = [];              // 模型文件
     protected static $act = [];              // 控制器文件
     // 加载类库
-    protected static $load = ['app\m\\' => [], 'app\\' => [], 'csn\t\\' => [], 'csn\y\\' => []];
+    protected static $load = ['app\m\\' => [], 'app\\' => [], 'csn\y\\' => [], 'csn\\' => []];
     // 文件引入相关信息
     protected static $file = [CSN => 'csn', APP => 'app', WEB => 'web'];
     // 自动加载类相关信息
-    protected static $class = ['app\m\\' => APP_M, 'app\\' => APP, 'csn\t\\' => CSN_T, 'csn\y\\' => CSN_Y];
+    protected static $class = ['app\m\\' => APP_M, 'app\\' => APP, 'csn\y\\' => CSN_Y, 'csn\\' => CSN_T];
 
     // 框架初始化
     static function init()
@@ -46,10 +46,10 @@ class Csn
     }
 
     // 获取框架模型、外调模型、项目模型
-    static function obj($class, array $args = [], $type = 't')
+    static function obj($class, array $args = [], $type = '')
     {
-        in_array($type, ['t', 'y', 'm']) || Exp::end('框架模型类不合格');
-        $class = ($type === 'm' ? 'app\\m\\' : 'csn\\' . $type . '\\') . $class;
+        in_array($type, ['', 'y', 'm']) || Exp::end('框架模型类不合格');
+        $class = ($type === 'm' ? 'app\\m\\' : 'csn\\' . ($type === '' ? '' : ($type . '\\'))) . $class;
         key_exists($class, self::$obj) && self::$obj[$class]['args'] === $args || self::$obj[$class] = ['class' => (new \ReflectionClass($class))->newInstanceArgs($args), 'args' => $args];
         return self::$obj[$class]['class'];
     }

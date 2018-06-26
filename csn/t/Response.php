@@ -2,7 +2,7 @@
 
 namespace csn;
 
-interface Idbable
+class Response
 {
 
 }

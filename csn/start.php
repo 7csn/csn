@@ -36,14 +36,14 @@ define('WEB', dirname(APP) . XG);
 include CSN_T . 'Csn.php';
 
 // 自加载composer类库
-\csn\t\Csn::inc(WEB . 'vendor' . XG . 'autoload.php');
+\csn\Csn::inc(WEB . 'vendor' . XG . 'autoload.php');
 
 // 自加载框架、项目类
-spl_autoload_register('\csn\t\Csn::load');
+spl_autoload_register('\csn\Csn::load');
 
 // 自定义错误、异常
-set_error_handler('\csn\t\Exp::error');
-set_exception_handler('\csn\t\Exp::exception');
+set_error_handler('\csn\Exp::error');
+set_exception_handler('\csn\Exp::exception');
 
 // 框架初始化
-\csn\t\Csn::init();
+\csn\Csn::init();

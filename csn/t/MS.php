@@ -1,6 +1,6 @@
 <?php
 
-namespace csn\t;
+namespace csn;
 
 class MS extends Node implements Idbable
 {

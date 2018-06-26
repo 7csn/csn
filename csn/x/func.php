@@ -10,13 +10,13 @@ function system($name, $func = null) {
 // 导入视图
 function view()
 {
-    return \csn\t\Csn::obj('View', func_get_args());
+    return \csn\Csn::obj('View', func_get_args());
 }
 
 // 获取静态页
 function cache()
 {
-    return call_user_func_array('\csn\t\View::getCache', func_get_args());
+    return call_user_func_array('\csn\View::getCache', func_get_args());
 }
 
 // 模板引入方法

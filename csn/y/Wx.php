@@ -12,9 +12,9 @@ class Wx
     // 获取微信相关配置
     protected static function get($name = false)
     {
-        self::$wx || self::$wx = \csn\t\Conf::wx();
+        self::$wx || self::$wx = \csn\Conf::wx();
         if (!$name) return self::$wx;
-        return key_exists($name, self::$wx) ? self::$wx[$name] : \csn\t\Exp::close('微信项' . $name . '配置不正确')->E();
+        return key_exists($name, self::$wx) ? self::$wx[$name] : \csn\Exp::close('微信项' . $name . '配置不正确')->E();
     }
 
     static function getSignPackage()
@@ -85,7 +85,7 @@ class Wx
         }
         if ($data->expire_time < time()) {
             $url = "https://api.weixin.qq.com/cgi-bin/token?grant_type=client_credential&appid=" . self::get('APPID') . "&secret=" . self::get('APPSECRET');
-            $res = json_decode(\csn\t\Http::simple($url));
+            $res = json_decode(\csn\Http::simple($url));
             $access_token = $res->access_token;
             if ($access_token) {
                 $data->expire_time = time() + 7000;
