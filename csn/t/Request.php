@@ -26,12 +26,18 @@ class Request
         return is_null(self::$obj) ? self::$obj = new self : self::$obj;
     }
 
+    // 响应
+    static function response()
+    {
+        return Route::run(Route::path(self::path(), true)) . '';
+    }
+
     // 解析路由
     static function parse()
     {
         File::copy(CSN_X . 'route.php', APP . 'route.php');
         Csn::inc(APP . 'route.php');
-        return Route::run(Route::path(self::path(), true));
+        return self::instance();
     }
 
     // 路由定位

@@ -39,8 +39,10 @@ class Csn
     // 启动框架
     static function run()
     {
+        // 初始化密钥文件
         Safe::secretInit();
-        exit(Request::parse() . '');
+        // 解析请求并响应
+        exit(Request::parse()->response());
     }
 
     // 获取框架模型、外调模型、项目模型
