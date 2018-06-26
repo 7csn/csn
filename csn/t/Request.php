@@ -29,7 +29,7 @@ class Request
     // 响应
     static function response()
     {
-        return Route::run(Route::path(self::path(), true)) . '';
+        return Csn::obj('Response');
     }
 
     // 解析路由
@@ -37,7 +37,8 @@ class Request
     {
         File::copy(CSN_X . 'route.php', APP . 'route.php');
         Csn::inc(APP . 'route.php');
-        return self::instance();
+        $request = self::instance();
+        return $request;
     }
 
     // 路由定位
