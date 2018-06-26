@@ -109,7 +109,7 @@ class Safe
         // 密钥结合密锁随机值MD5加密
         $md5 = strtoupper(md5(self::get('key') . $lk));
         // 字符串BASE64加密
-        $str = base64_encode($str);
+        $str = self::en($str);
         $res = '';
         for ($i = $k = 0, $c = strlen($str); $i < $c; $i++) {
             $k === strlen($md5) && $k = 0;
@@ -151,7 +151,7 @@ class Safe
             $k++;
         }
         // 返回BASE64解密源字符串
-        return base64_decode($tmpStream);
+        return self::de($tmpStream);
     }
 
     // 生成登录ID
@@ -223,7 +223,8 @@ class Safe
         }
     }
 
-    static function en58($str)
+    // 加密
+    static function en($str)
     {
         // 加密条件：非空字符串
         if (is_string($str) === false || strlen($str) === 0) return $str;
@@ -256,7 +257,8 @@ class Safe
         return (string)$res;
     }
 
-    static function de58($str)
+    // 解密
+    static function de($str)
     {
         // 解密条件：非空字符串
         if (is_string($str) === false || strlen($str) === 0) return $str;
@@ -281,7 +283,7 @@ class Safe
             $res = pack('C', bcmod($num256, 256)) . $res;
             $num256 = bcdiv($num256, 256, 0);
         }
-        //
+        // 字符组还原前0数还原ASCII码
         foreach ($chars as $char) {
             if ($lock[$char] === 0) {
                 $res = "\x00" . $res;
