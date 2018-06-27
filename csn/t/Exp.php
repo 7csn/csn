@@ -5,18 +5,13 @@ namespace csn;
 class Exp
 {
 
-    protected static $me;             // 当前对象
+    protected static $instance;             // 当前对象
     protected static $meta;           // 显示编码
     protected static $pre;            // 开发样式
     protected static $table;          // 生产样式
-    protected static $status = [
-        'y' => 0,
-        'n' => 1,
-        'a' => 2,
-        'e' => 3
-    ];
     protected static $error = [];     // 错误数组
     protected static $name = [];      // 错误名称数组
+    protected static $status = ['y' => 0, 'n' => 1, 'a' => 2, 'e' => 3];
     // 常见错误类型
     protected static $type = [
         'Fatal Error' => [E_ERROR, E_CORE_ERROR, E_COMPILE_ERROR, E_USER_ERROR],
@@ -26,9 +21,9 @@ class Exp
     ];
 
     // 单例对象
-    protected static function me()
+    protected static function instance()
     {
-        return is_null(self::$me) ? self::$me = new self() : self::$me;
+        return is_null(self::$instance) ? self::$instance = new self() : self::$instance;
     }
 
     // 自定义错误(非致命)处理
@@ -98,7 +93,7 @@ class Exp
             call_user_func($func, $arg);
             echo '</pre>';
         }
-        return self::me();
+        return self::instance();
     }
 
     // 生产模式显示信息
@@ -107,7 +102,7 @@ class Exp
         $info === 'Csn-tsyx' && Conf::init();
         self::table();
         echo "<table class='table'><tr/><tr><td><div class='div'>{$info}</div></td></tr><tr/><tr/></table>$go";
-        return self::me();
+        return self::instance();
     }
 
     // 显示调试样式

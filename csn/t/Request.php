@@ -5,9 +5,9 @@ namespace csn;
 class Request
 {
 
-    static $m;
-    static $c;
-    static $a;
+    static $module;
+    static $controller;
+    static $action;
 
     static protected $path;
     static protected $uri;
@@ -18,21 +18,31 @@ class Request
     static protected $ip;
     static protected $get;
     static protected $post;
-    static protected $obj;
 
-    // 实例
+    // ----------------------------------------------------------------------
+    //  实例
+    // ----------------------------------------------------------------------
+
+    static protected $instance;
+
     static function instance()
     {
-        return is_null(self::$obj) ? self::$obj = new self : self::$obj;
+        return is_null(self::$instance) ? self::$instance = new self : self::$instance;
     }
 
-    // 响应
+    // ----------------------------------------------------------------------
+    //  响应
+    // ----------------------------------------------------------------------
+
     static function response()
     {
         return Csn::obj('Response');
     }
 
-    // 解析路由
+    // ----------------------------------------------------------------------
+    //  解析路由
+    // ----------------------------------------------------------------------
+
     static function parse()
     {
         File::copy(CSN_X . 'route.php', APP . 'route.php');

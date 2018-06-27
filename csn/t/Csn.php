@@ -8,14 +8,14 @@ class Csn
     protected static $inc = [];              // 加载文件
     protected static $obj = [];              // 模型文件
     protected static $act = [];              // 控制器文件
-    // 加载类库
-    protected static $load = ['app\m\\' => [], 'app\\' => [], 'csn\y\\' => [], 'csn\\' => []];
     // 文件引入相关信息
     protected static $file = [CSN => 'csn', APP => 'app', WEB => 'web'];
-    // 自动加载类相关信息
-    protected static $class = ['app\m\\' => APP_M, 'app\\' => APP, 'csn\y\\' => CSN_Y, 'csn\\' => CSN_T];
 
-    // 框架初始化
+
+    // ----------------------------------------------------------------------
+    //  框架初始化
+    // ----------------------------------------------------------------------
+
     static function init()
     {
         // 引入框架字母方法
@@ -36,7 +36,10 @@ class Csn
         define('UA', isset($_SERVER['HTTP_USER_AGENT']) ? $_SERVER['HTTP_USER_AGENT'] : null);
     }
 
-    // 启动框架
+    // ----------------------------------------------------------------------
+    //  启动框架
+    // ----------------------------------------------------------------------
+
     static function run()
     {
         // 初始化密钥文件
@@ -65,10 +68,20 @@ class Csn
         return self::$act[$c]['class'];
     }
 
-    // 自动加载框架、项目类文件
+    // ----------------------------------------------------------------------
+    //  类文件自加载(框架、项目)
+    // ----------------------------------------------------------------------
+
+    // 
+    protected static $class = ['csn\y\\' => CSN_Y, 'csn\\' => CSN_T, 'app\m\\' => APP_M, 'app\\' => APP];
+
+    // 加载类库
+    protected static $load = ['csn\y\\' => [], 'csn\\' => [], 'app\m\\' => [], 'app\\' => []];
+
     static function load($class)
     {
-        $res = self::search($class, self::$class);
+        // 检索文件名或类名
+        $res = self::search($class);
         if (is_null($res)) return;
         $type = $res[0];
         $name = str_replace('\\', XG, str_replace($type, '', $class));
@@ -78,27 +91,32 @@ class Csn
         self::$load[$type][] = $name;
     }
 
-    // 引入文件
-    static function inc($file, $force = false)
-    {
-        return $force || !key_exists($file, self::$inc) ? self::$inc[$file] = is_file($file) ? include $file : null : self::$inc[$file];
-    }
-
-    // 检索文件名或类名
-    protected static function search($str, $where)
+    protected static function search($str)
     {
         $res = null;
-        foreach ($where as $k => $v) {
+        foreach (self::$class as $k => $v) {
             if (strpos($str, $k) === 0) {
                 $res = [$k, $v];
                 break;
             }
         }
-        reset($where);
+        reset(self::$class);
         return $res;
     }
 
-    // 显示信息并跳转
+    // ----------------------------------------------------------------------
+    //  引入文件
+    // ----------------------------------------------------------------------
+
+    static function inc($file, $force = false)
+    {
+        return $force || !key_exists($file, self::$inc) ? self::$inc[$file] = is_file($file) ? include $file : null : self::$inc[$file];
+    }
+
+    // ----------------------------------------------------------------------
+    //  显示信息并跳转
+    // ----------------------------------------------------------------------
+
     static function go($url, $info = false, $time = 1000)
     {
         $url = Request::makeUrl($url);
@@ -110,13 +128,19 @@ class Csn
         }
     }
 
-    // 页面跳转
+    // ----------------------------------------------------------------------
+    //  页面跳转
+    // ----------------------------------------------------------------------
+
     protected static function href($url, $time = 1000)
     {
         return '<script>setTimeout(function () {location = "' . $url . '";}, ' . $time . ');</script>';
     }
 
-    // 接口返回值
+    // ----------------------------------------------------------------------
+    //  接口返回值
+    // ----------------------------------------------------------------------
+
     static function back($back, $type = 'json')
     {
         switch ($type) {

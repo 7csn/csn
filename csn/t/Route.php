@@ -150,13 +150,13 @@ class Route
     {
         preg_match_all('/^(\w+\/)?(\w+)@(\w+)$/', $point, $match);
         empty($match[0]) && Exp::end('路由指向异常');
-        Request::$m = substr($match[1][0], 0, -1);
-        Request::$c = $match[2][0];
-        Request::$a = $match[3][0];
+        Request::$module = substr($match[1][0], 0, -1);
+        Request::$controller = $match[2][0];
+        Request::$action = $match[3][0];
         // 加载控制器
-        $c = Csn::act(Request::$c, Request::$m);
-        method_exists($c, Request::$a) || Exp::end('控制器' . Request::$m . Request::$c . '找不到方法' . Request::$a);
-        return [$c, Request::$a];
+        $c = Csn::act(Request::$controller, Request::$module);
+        method_exists($c, Request::$action) || Exp::end('控制器' . Request::$module . Request::$controller . '找不到方法' . Request::$action);
+        return [$c, Request::$action];
     }
 
     // 解析路由指向方法参数
