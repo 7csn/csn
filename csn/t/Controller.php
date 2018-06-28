@@ -11,12 +11,12 @@ class Controller
 
     protected static $model = [];
 
-    final static function model($class, $args = [], $type = '')
+    final static function model($name, $args = [], $type = '')
     {
         in_array($type, ['', 'y', 'm']) || Exp::end('框架模型类不合格');
-        $name = ($type ? $type === 'm' ? 'app\\m' : 'csn\\y' : 'csn') . '\\' . $class;
-        key_exists($name, self::$model) && self::$model[$name]['args'] === $args || self::$model[$name] = ['class' => (new \ReflectionClass($name))->newInstanceArgs($args), 'args' => $args];
-        return self::$model[$name]['class'];
+        $class = ($type ? $type === 'm' ? 'app\\m' : 'csn\\y' : 'csn') . '\\' . $name;
+        key_exists($class, self::$model) && self::$model[$class]['args'] === $args || self::$model[$class] = ['obj' => (new \ReflectionClass($class))->newInstanceArgs($args), 'args' => $args];
+        return self::$model[$class]['obj'];
     }
 
     // ----------------------------------------------------------------------
@@ -27,38 +27,52 @@ class Controller
 
     final static function action($controller, $module = false)
     {
-        $name = ($module ? XG . $module : '') . XG . $controller;
-        key_exists($controller, self::$action) && self::$action[$controller]['name'] === $name && Exp::end('不能跨模块引入同名控制器');
-        self::inc(APP_C . $name . '.php');
+        $name = ($module ? XG . str_replace('/', XG, $module) : '') . XG . $controller;
+        key_exists($controller, self::$action) && self::$action[$controller]['name'] === $name && Exp::end('禁止跨模块引入同名控制器');
+        Csn::inc(APP_C . $name . '.php');
         $class = '\app\c\\' . $controller;
-        self::$action[$controller] = ['name' => $name, 'class' => new $class()];
-        return self::$action[$controller]['class'];
+        self::$action[$controller] = ['name' => $name, 'obj' => new $class()];
+        return self::$action[$controller]['obj'];
     }
 
     // ----------------------------------------------------------------------
     //  显示信息并跳转
     // ----------------------------------------------------------------------
 
-    final static function go($url, $info = false, $time = 1000)
+    final static function redirect($url, $info = false, $time = 1000)
     {
-        $url = Request::makeUrl($url);
-        $info && Exp::close($info, self::href($url, $time))->E();
+        $info && Exp::close($info, "<script>setTimeout(function() { window.location.href = '$url'; }, $time);</script>")->E();
         usleep($time * 1000);
         header('Location:' . $url);
     }
 
     // ----------------------------------------------------------------------
-    //  页面跳转
+    //  接口数据返回
     // ----------------------------------------------------------------------
 
-    final protected static function href($url, $time = 1000)
+    final static function text($data)
     {
-        return "<script>setTimeout(function() { window.location.href = '$url'; }, $time);</script>";
+        header('Content-Type:text/pain');
+        return $data;
     }
 
-    // ----------------------------------------------------------------------
-    //  接口返回值
-    // ----------------------------------------------------------------------
+    final static function html($data)
+    {
+        header('Content-Type:text/pain');
+        return $data;
+    }
+
+    final static function json($data)
+    {
+        header('Content-Type:text/pain');
+        return $data;
+    }
+
+    final static function xml($data)
+    {
+        header('Content-Type:text/pain');
+        return $data;
+    }
 
     final static function back($back, $type = 'json')
     {
