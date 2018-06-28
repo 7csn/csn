@@ -263,13 +263,13 @@ class View
     // 视图目录
     protected static function viewDir()
     {
-        return is_null(self::$viewDir) ? self::$viewDir = APP_V : self::$viewDir;
+        return is_null(self::$viewDir) ? self::$viewDir = APP_VIEW : self::$viewDir;
     }
 
     // 编译静态目录
     protected static function templateDir($which)
     {
-        return key_exists($which, self::$templateDir) ? self::$templateDir[$which] : self::$templateDir[$which] = APP_T . $which . XG;
+        return key_exists($which, self::$templateDir) ? self::$templateDir[$which] : self::$templateDir[$which] = RUN_T . $which . XG;
     }
 
 }

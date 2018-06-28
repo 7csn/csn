@@ -42,6 +42,17 @@ final class Csn
     }
 
     // ----------------------------------------------------------------------
+    //  启动指令集
+    // ----------------------------------------------------------------------
+
+    static function cmd()
+    {
+        print_r($_SERVER['argc']);
+        echo "\n";
+        print_r($_SERVER['argv']);
+    }
+
+    // ----------------------------------------------------------------------
     //  类文件自加载(框架、项目)
     // ----------------------------------------------------------------------
 
@@ -49,7 +60,7 @@ final class Csn
     protected static $load = ['csn\y\\' => [], 'csn\\' => [], 'app\m\\' => [], 'app\\' => []];
 
     // 对照表：类名前缀=>路径前缀
-    protected static $class = ['csn\y\\' => CSN_Y, 'csn\\' => CSN_T, 'app\m\\' => APP_M, 'app\\' => APP];
+    protected static $class = ['csn\y\\' => CSN_Y, 'csn\\' => CSN_T, 'app\m\\' => APP_MODEL, 'app\\' => APP];
 
     // 类自加载
     static function load($class)

@@ -29,7 +29,7 @@ class Controller
     {
         $name = ($module ? XG . str_replace('/', XG, $module) : '') . XG . $controller;
         key_exists($controller, self::$action) && self::$action[$controller]['name'] === $name && Exp::end('禁止跨模块引入同名控制器');
-        Csn::inc(APP_C . $name . '.php');
+        Csn::inc(APP_CONTROLLER . $name . '.php');
         $class = '\app\c\\' . $controller;
         self::$action[$controller] = ['name' => $name, 'obj' => new $class()];
         return self::$action[$controller]['obj'];
