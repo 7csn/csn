@@ -10,7 +10,7 @@ function system($name, $func = null) {
 // 导入视图
 function view()
 {
-    return \csn\Csn::obj('View', func_get_args());
+    return \csn\Controller::model('View', func_get_args());
 }
 
 // 获取静态页

@@ -66,7 +66,7 @@ class Route
     // 路由控制对象
     protected static function tap()
     {
-        return Csn::obj('Tap', func_get_args());
+        return Controller::model('Tap', func_get_args());
     }
 
     // 执行控制器方法
@@ -154,7 +154,7 @@ class Route
         Request::$controller = $match[2][0];
         Request::$action = $match[3][0];
         // 加载控制器
-        $c = Csn::act(Request::$controller, Request::$module);
+        $c = Controller::action(Request::$controller, Request::$module);
         method_exists($c, Request::$action) || Exp::end('控制器' . Request::$module . Request::$controller . '找不到方法' . Request::$action);
         return [$c, Request::$action];
     }

@@ -36,7 +36,7 @@ class Request
 
     static function response()
     {
-        return Csn::obj('Response');
+        return Controller::model('Response');
     }
 
     // ----------------------------------------------------------------------

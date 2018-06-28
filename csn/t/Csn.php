@@ -5,18 +5,11 @@ namespace csn;
 class Csn
 {
 
-    protected static $inc = [];              // 加载文件
-    protected static $obj = [];              // 模型文件
-    protected static $act = [];              // 控制器文件
-    // 文件引入相关信息
-    protected static $file = [CSN => 'csn', APP => 'app', WEB => 'web'];
-
-
     // ----------------------------------------------------------------------
     //  框架初始化
     // ----------------------------------------------------------------------
 
-    static function init()
+    final static function init()
     {
         // 引入框架字母方法
         self::inc(CSN_X . 'latin.php');
@@ -40,7 +33,7 @@ class Csn
     //  启动框架
     // ----------------------------------------------------------------------
 
-    static function run()
+    final static function run()
     {
         // 初始化密钥文件
         Safe::secretInit();
@@ -48,39 +41,20 @@ class Csn
         exit(Request::parse()->response());
     }
 
-    // 获取框架模型、外调模型、项目模型
-    static function obj($class, array $args = [], $type = '')
-    {
-        in_array($type, ['', 'y', 'm']) || Exp::end('框架模型类不合格');
-        $class = ($type === 'm' ? 'app\\m\\' : 'csn\\' . ($type === '' ? '' : ($type . '\\'))) . $class;
-        key_exists($class, self::$obj) && self::$obj[$class]['args'] === $args || self::$obj[$class] = ['class' => (new \ReflectionClass($class))->newInstanceArgs($args), 'args' => $args];
-        return self::$obj[$class]['class'];
-    }
-
-    // 获取项目控制器对象
-    static function act($c, $m = false)
-    {
-        $name = ($m ? XG . $m : '') . XG . $c;
-        key_exists($c, self::$act) && self::$act[$c]['name'] === $name && Exp::end('不能跨模块引入同名控制器');
-        self::inc(APP_C . $name . '.php');
-        $class = '\app\c\\' . $c;
-        self::$act[$c] = ['name' => $name, 'class' => new $class()];
-        return self::$act[$c]['class'];
-    }
 
     // ----------------------------------------------------------------------
     //  类文件自加载(框架、项目)
     // ----------------------------------------------------------------------
 
-    // 类名路径前缀对照表
+    // 前缀对照表：类名=>路径
     protected static $class = ['csn\y\\' => CSN_Y, 'csn\\' => CSN_T, 'app\m\\' => APP_M, 'app\\' => APP];
 
     // 加载类库
     protected static $load = ['csn\y\\' => [], 'csn\\' => [], 'app\m\\' => [], 'app\\' => []];
 
-    static function load($class)
+    // 类自加载
+    final static function load($class)
     {
-        // 检索文件名或类名
         $res = self::search($class);
         if (is_null($res)) return;
         $type = $res[0];
@@ -91,7 +65,8 @@ class Csn
         self::$load[$type][] = $name;
     }
 
-    protected static function search($str)
+    // 检索类名前缀与路径前缀
+    final protected static function search($str)
     {
         $res = null;
         foreach (self::$class as $k => $v) {
@@ -108,55 +83,15 @@ class Csn
     //  引入文件
     // ----------------------------------------------------------------------
 
-    static function inc($file, $force = false)
+    // 加载文件
+    protected static $inc = [];
+
+    // 路径前缀与类型对照表
+    protected static $file = [CSN => 'csn', APP => 'app', WEB => 'web'];
+
+    final static function inc($file, $force = false)
     {
         return $force || !key_exists($file, self::$inc) ? self::$inc[$file] = is_file($file) ? include $file : null : self::$inc[$file];
-    }
-
-    // ----------------------------------------------------------------------
-    //  显示信息并跳转
-    // ----------------------------------------------------------------------
-
-    static function go($url, $info = false, $time = 1000)
-    {
-        $url = Request::makeUrl($url);
-        if ($info) {
-            Exp::close($info, self::href($url, $time))->E();
-        } else {
-            usleep($time);
-            header('Location:' . $url);
-        }
-    }
-
-    // ----------------------------------------------------------------------
-    //  页面跳转
-    // ----------------------------------------------------------------------
-
-    protected static function href($url, $time = 1000)
-    {
-        return '<script>setTimeout(function () {location = "' . $url . '";}, ' . $time . ');</script>';
-    }
-
-    // ----------------------------------------------------------------------
-    //  接口返回值
-    // ----------------------------------------------------------------------
-
-    static function back($back, $type = 'json')
-    {
-        switch ($type) {
-            case 'xml':
-                header('Content-Type:text/xml');
-                return is_string($back) ? $back : xml_encode($back);
-            case 'jsonp':
-                header('Content-Type:application/json');
-                return '(' . (is_string($back) ? $back : json_encode($back)) . ');';
-            case 'html':
-                header('Content-Type:text/html');
-                return $back;
-            default :
-                header('Content-Type:application/json');
-                return is_string($back) ? $back : json_encode($back);
-        }
     }
 
 }

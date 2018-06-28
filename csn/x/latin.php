@@ -31,7 +31,7 @@ function L($o, $fn)
 // 网络连接
 function H()
 {
-    return \csn\Csn::obj('Http', func_get_args());
+    return \csn\Controller::model('Http', func_get_args());
 }
 
 // 数据库连接
