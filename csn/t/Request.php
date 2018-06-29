@@ -2,7 +2,7 @@
 
 namespace csn;
 
-class Request
+final class Request
 {
 
     static protected $uri;

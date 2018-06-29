@@ -64,7 +64,7 @@ class Conf
     // 获取项目配置项数组
     protected static function me($name)
     {
-        return key_exists($name, self::$me) ? self::$me[$name] : (self::$me[$name] = Csn::need(APP . $name . '.php') ?: []);
+        return key_exists($name, self::$me) ? self::$me[$name] : (self::$me[$name] = Csn::need(APP_CONFIG . $name . '.php') ?: []);
     }
 
     // 获取框架默认配置项数组

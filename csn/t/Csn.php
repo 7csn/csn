@@ -95,10 +95,10 @@ final class Csn
     // 文件库
     protected static $needs = [];
 
-    // 引入文件：文件路径、是否重新
-    static function need($file, $anew = false)
+    // 引入文件：文件路径
+    static function need($file)
     {
-        return $anew || !key_exists($file, self::$needs) ? self::$needs[$file] = is_file($file) ? include $file : null : self::$needs[$file];
+        return key_exists($file, self::$needs) ? self::$needs[$file] : self::$needs[$file] = is_file($file) ? include $file : null;
     }
 
 }

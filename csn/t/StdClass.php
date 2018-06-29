@@ -6,21 +6,27 @@ class StdClass
 {
 
     // ----------------------------------------------------------------------
+    //  构造函数
+    // ----------------------------------------------------------------------
+
+    protected function __construct()
+    {
+    }
+
+    // ----------------------------------------------------------------------
     //  单例
     // ----------------------------------------------------------------------
 
-    static protected $single;
+    protected static $single;
 
     static function single()
     {
-        return is_null(self::$instance) ? self::$instance = new self : self::$instance;
+        return is_null(self::$single) ? self::$single = new self : self::$single;
     }
 
     // ----------------------------------------------------------------------
     //  实例
     // ----------------------------------------------------------------------
-
-    static protected $instance;
 
     static function instance()
     {
