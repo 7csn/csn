@@ -46,7 +46,7 @@ class Request
     static function parse()
     {
         File::copy(CSN_X . 'route.php', APP . 'route.php');
-        Csn::inc(APP . 'route.php');
+        Csn::need(APP . 'route.php');
         $request = self::instance();
         return $request;
     }

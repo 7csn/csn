@@ -9,30 +9,30 @@ class Controller
     //  获取模型(框架核心、框架外调、项目)
     // ----------------------------------------------------------------------
 
-    protected static $model = [];
+    protected static $models = [];
 
     final static function model($name, $args = [], $type = '')
     {
         in_array($type, ['', 'y', 'm']) || Exp::end('框架模型类不合格');
         $class = ($type ? $type === 'm' ? 'app\\m' : 'csn\\y' : 'csn') . '\\' . $name;
-        key_exists($class, self::$model) && self::$model[$class]['args'] === $args || self::$model[$class] = ['obj' => (new \ReflectionClass($class))->newInstanceArgs($args), 'args' => $args];
-        return self::$model[$class]['obj'];
+        key_exists($class, self::$models) && self::$models[$class]['args'] === $args || self::$models[$class] = ['obj' => (new \ReflectionClass($class))->newInstanceArgs($args), 'args' => $args];
+        return self::$models[$class]['obj'];
     }
 
     // ----------------------------------------------------------------------
     //  获取项目控制器对象
     // ----------------------------------------------------------------------
 
-    protected static $action = [];
+    protected static $actions = [];
 
     final static function action($controller, $module = false)
     {
         $name = ($module ? XG . str_replace('/', XG, $module) : '') . XG . $controller;
-        key_exists($controller, self::$action) && self::$action[$controller]['name'] === $name && Exp::end('禁止跨模块引入同名控制器');
-        Csn::inc(APP_CONTROLLER . $name . '.php');
+        key_exists($controller, self::$actions) && self::$actions[$controller]['name'] === $name && Exp::end('禁止跨模块引入同名控制器');
+        Csn::need(APP_CONTROLLER . $name . '.php');
         $class = '\app\c\\' . $controller;
-        self::$action[$controller] = ['name' => $name, 'obj' => new $class()];
-        return self::$action[$controller]['obj'];
+        self::$actions[$controller] = ['name' => $name, 'obj' => new $class()];
+        return self::$actions[$controller]['obj'];
     }
 
     // ----------------------------------------------------------------------
@@ -64,7 +64,7 @@ class Controller
 
     final static function json($data)
     {
-        header('Content-Type:text/pain');
+        header('Content-Type:application/json');
         return $data;
     }
 

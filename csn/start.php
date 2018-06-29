@@ -45,7 +45,7 @@ define('PUB', WEB . 'public' . XG);
 //  项目应用目录：根目录、模型、视图、控制器
 // ----------------------------------------------------------------------
 
-define('APP', WEB . 'app' . XG);
+define('APP', WEB . 'application' . XG);
 define('APP_MODEL', APP . 'models' . XG);
 define('APP_VIEW', APP . 'views' . XG);
 define('APP_CONTROLLER', APP . 'controllers' . XG);
@@ -68,7 +68,7 @@ include CSN_T . 'Csn.php';
 //  自加载composer类库
 // ----------------------------------------------------------------------
 
-\csn\Csn::inc(WEB . 'vendor' . XG . 'autoload.php');
+\csn\Csn::need(WEB . 'vendor' . XG . 'autoload.php');
 
 // ----------------------------------------------------------------------
 //  自加载框架、项目类

@@ -12,9 +12,9 @@ final class Csn
     static function init()
     {
         // 引入框架字母方法
-        self::inc(CSN_X . 'latin.php');
+        self::need(CSN_X . 'latin.php');
         // 引入框架常用方法
-        self::inc(CSN_X . 'func.php');
+        self::need(CSN_X . 'func.php');
         // 是否调试模式
         defined('T_S') || define('T_S', Conf::web('debug'));
         // 设置编码
@@ -57,7 +57,7 @@ final class Csn
     // ----------------------------------------------------------------------
 
     // 类库
-    protected static $load = ['csn\y\\' => [], 'csn\\' => [], 'app\m\\' => [], 'app\\' => []];
+    protected static $loads = ['csn\y\\' => [], 'csn\\' => [], 'app\m\\' => [], 'app\\' => []];
 
     // 对照表：类名前缀=>路径前缀
     protected static $class = ['csn\y\\' => CSN_Y, 'csn\\' => CSN_T, 'app\m\\' => APP_MODEL, 'app\\' => APP];
@@ -69,9 +69,9 @@ final class Csn
         $type = $res[0];
         $name = str_replace('\\', XG, str_replace($type, '', $class));
         $file = $res[1] . $name . '.php';
-        in_array($name, self::$load[$type]) && Exp::end('类' . $class . '异常');
-        is_file($file) ? self::inc($file) : Exp::end('找不到类' . $class);
-        self::$load[$type][] = $name;
+        in_array($name, self::$loads[$type]) && Exp::end('类' . $class . '异常');
+        is_file($file) ? self::need($file) : Exp::end('找不到类' . $class);
+        self::$loads[$type][] = $name;
     }
 
     // 检索类名前缀与路径前缀
@@ -93,15 +93,15 @@ final class Csn
     // ----------------------------------------------------------------------
 
     // 文件库
-    protected static $inc = [];
+    protected static $needs = [];
 
     // 对照表：路径前缀=>类型
     protected static $file = [CSN => 'csn', APP => 'app', WEB => 'web'];
 
     // 引入文件：文件路径、是否强制
-    static function inc($file, $force = false)
+    static function need($file, $force = false)
     {
-        return $force || !key_exists($file, self::$inc) ? self::$inc[$file] = is_file($file) ? include $file : null : self::$inc[$file];
+        return $force || !key_exists($file, self::$needs) ? self::$needs[$file] = is_file($file) ? include $file : null : self::$needs[$file];
     }
 
 }

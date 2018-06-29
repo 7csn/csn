@@ -64,13 +64,13 @@ class Conf
     // 获取项目配置项数组
     protected static function me($name)
     {
-        return key_exists($name, self::$me) ? self::$me[$name] : (self::$me[$name] = Csn::inc(APP . $name . '.php') ?: []);
+        return key_exists($name, self::$me) ? self::$me[$name] : (self::$me[$name] = Csn::need(APP . $name . '.php') ?: []);
     }
 
     // 获取框架默认配置项数组
     protected static function csn($name)
     {
-        return key_exists($name, self::$csn) ? self::$csn[$name] : (self::$csn[$name] = Csn::inc(CSN_S . $name . '.php'));
+        return key_exists($name, self::$csn) ? self::$csn[$name] : (self::$csn[$name] = Csn::need(CSN_S . $name . '.php'));
     }
 
     // 获取配置项具体信息
