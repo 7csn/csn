@@ -95,13 +95,10 @@ final class Csn
     // 文件库
     protected static $needs = [];
 
-    // 对照表：路径前缀=>类型
-    protected static $file = [CSN => 'csn', APP => 'app', WEB => 'web'];
-
-    // 引入文件：文件路径、是否强制
-    static function need($file, $force = false)
+    // 引入文件：文件路径、是否重新
+    static function need($file, $anew = false)
     {
-        return $force || !key_exists($file, self::$needs) ? self::$needs[$file] = is_file($file) ? include $file : null : self::$needs[$file];
+        return $anew || !key_exists($file, self::$needs) ? self::$needs[$file] = is_file($file) ? include $file : null : self::$needs[$file];
     }
 
 }
