@@ -67,7 +67,7 @@ final class Csn
     {
         if (is_null($res = self::search($class))) return;
         $type = $res[0];
-        $name = str_replace('\\', XG, str_replace($type, '', $class));
+        $name = str_replace('\\', DS, str_replace($type, '', $class));
         $file = $res[1] . $name . '.php';
         in_array($name, self::$loads[$type]) && Exp::end('类' . $class . '异常');
         is_file($file) ? self::need($file) : Exp::end('找不到类' . $class);

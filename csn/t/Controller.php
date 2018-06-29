@@ -27,7 +27,7 @@ class Controller
 
     final static function action($controller, $module = false)
     {
-        $name = ($module ? XG . str_replace('/', XG, $module) : '') . XG . $controller;
+        $name = ($module ? DS . str_replace('/', DS, $module) : '') . DS . $controller;
         key_exists($controller, self::$actions) && self::$actions[$controller]['name'] === $name && Exp::end('禁止跨模块引入同名控制器');
         Csn::need(APP_CONTROLLER . $name . '.php');
         $class = '\app\c\\' . $controller;
@@ -44,6 +44,7 @@ class Controller
         $info && Exp::close($info, "<script>setTimeout(function() { window.location.href = '$url'; }, $time);</script>")->E();
         usleep($time * 1000);
         header('Location:' . $url);
+        die;
     }
 
     // ----------------------------------------------------------------------

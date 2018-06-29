@@ -17,46 +17,47 @@ define('CSN_START', $_SERVER['REQUEST_TIME_FLOAT']);
 //  目录分隔符
 // ----------------------------------------------------------------------
 
-define('XG', DIRECTORY_SEPARATOR);
+define('DS', DIRECTORY_SEPARATOR);
 
 // ----------------------------------------------------------------------
 //  框架相关目录：根目录、核心类库、配置文件、外调模型、辅助函数
 // ----------------------------------------------------------------------
 
-define('CSN', __DIR__ . XG);
-define('CSN_T', CSN . 't' . XG);
-define('CSN_S', CSN . 's' . XG);
-define('CSN_Y', CSN . 'y' . XG);
-define('CSN_X', CSN . 'x' . XG);
+define('CSN', __DIR__ . DS);
+define('CSN_T', CSN . 't' . DS);
+define('CSN_S', CSN . 's' . DS);
+define('CSN_Y', CSN . 'y' . DS);
+define('CSN_X', CSN . 'x' . DS);
 
 // ----------------------------------------------------------------------
 //  项目根目录
 // ----------------------------------------------------------------------
 
-define('WEB', dirname(CSN) . XG);
+define('WEB', dirname(CSN) . DS);
 
 // ----------------------------------------------------------------------
 //  项目公共资源目录
 // ----------------------------------------------------------------------
 
-define('PUB', WEB . 'public' . XG);
+define('PUB', WEB . 'public' . DS);
 
 // ----------------------------------------------------------------------
-//  项目应用目录：根目录、模型、视图、控制器
+//  项目应用目录：根目录、模型、视图、控制器、配置
 // ----------------------------------------------------------------------
 
-define('APP', WEB . 'application' . XG);
-define('APP_MODEL', APP . 'models' . XG);
-define('APP_VIEW', APP . 'views' . XG);
-define('APP_CONTROLLER', APP . 'controllers' . XG);
+define('APP', WEB . 'application' . DS);
+define('APP_MODEL', APP . 'models' . DS);
+define('APP_VIEW', APP . 'views' . DS);
+define('APP_CONTROLLER', APP . 'controllers' . DS);
+define('APP_CONFIG', APP . 'configs' . DS);
 
 // ----------------------------------------------------------------------
 //  项目运行目录：根目录、会话、编译模板
 // ----------------------------------------------------------------------
 
-define('RUN', WEB . 'runtime' . XG);
-define('RUN_S', RUN . 'session' . XG);
-define('RUN_T', RUN . 'template' . XG);
+define('RUN', WEB . 'runtime' . DS);
+define('RUN_S', RUN . 'session' . DS);
+define('RUN_T', RUN . 'template' . DS);
 
 // ----------------------------------------------------------------------
 //  引入框架核心类文件
@@ -68,7 +69,7 @@ include CSN_T . 'Csn.php';
 //  自加载composer类库
 // ----------------------------------------------------------------------
 
-\csn\Csn::need(WEB . 'vendor' . XG . 'autoload.php');
+\csn\Csn::need(WEB . 'vendor' . DS . 'autoload.php');
 
 // ----------------------------------------------------------------------
 //  自加载框架、项目类

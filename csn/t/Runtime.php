@@ -44,12 +44,12 @@ class Runtime
     {
         $log = self::get($name);
         if (!$log['set']) return;
-        $dir = RUN . str_replace('.', XG, $log['dir']) . XG;
+        $dir = RUN . str_replace('.', DS, $log['dir']) . DS;
         if ($name === 'act') {
-            $file = $dir . date('Ymd') . XG . Route::$define . XG . Route::$path . '.json';
+            $file = $dir . date('Ymd') . DS . Route::$define . DS . Route::$path . '.json';
             self::actSave($file);
         } else {
-            $file = $dir . date('Ymd') . XG . date('H') . '.log';
+            $file = $dir . date('Ymd') . DS . date('H') . '.log';
             File::append($file, $info);
         }
         $size = $log['size'];

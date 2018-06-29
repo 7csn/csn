@@ -17,7 +17,7 @@ class Conf
     {
         if (is_null(self::$init) || $force) {
             foreach (self::files() as $file) {
-                File::copy(CSN_S . $file . '.php', APP . $file . '.php', $force);
+                File::copy(CSN_S . $file . '.php', APP_CONFIG . $file . '.php', $force);
             }
             self::$init = true;
         }

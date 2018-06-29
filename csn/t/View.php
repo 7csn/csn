@@ -40,7 +40,7 @@ class View
     // 转换路由
     protected static function path($path)
     {
-        return str_replace('.', XG, str_replace('/', XG, $path));
+        return str_replace('.', DS, str_replace('/', DS, $path));
     }
 
     // 获取使用视图
@@ -269,7 +269,7 @@ class View
     // 编译静态目录
     protected static function templateDir($which)
     {
-        return key_exists($which, self::$templateDir) ? self::$templateDir[$which] : self::$templateDir[$which] = RUN_T . $which . XG;
+        return key_exists($which, self::$templateDir) ? self::$templateDir[$which] : self::$templateDir[$which] = RUN_T . $which . DS;
     }
 
 }

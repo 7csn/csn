@@ -5,11 +5,6 @@ namespace csn;
 class Request
 {
 
-    static $module;
-    static $controller;
-    static $action;
-
-    static protected $path;
     static protected $uri;
     static protected $url;
     static protected $http;
@@ -20,10 +15,20 @@ class Request
     static protected $post;
 
     // ----------------------------------------------------------------------
+    //  模块、控制器、方法
+    // ----------------------------------------------------------------------
+
+    static $module;                 // 模块
+
+    static $controller;             // 控制器
+
+    static $action;                 // 方法
+
+    // ----------------------------------------------------------------------
     //  实例
     // ----------------------------------------------------------------------
 
-    static protected $instance;
+    protected static $instance;
 
     static function instance()
     {
@@ -48,14 +53,28 @@ class Request
         File::copy(CSN_X . 'route.php', APP . 'route.php');
         Csn::need(APP . 'route.php');
         $request = self::instance();
+        $request->path();
+
+
+
+
         return $request;
     }
 
-    // 路由定位
+    // ----------------------------------------------------------------------
+    //  定位路由
+    // ----------------------------------------------------------------------
+
+    protected static $path;
+
     static function path()
     {
         return is_null(self::$path) ? self::$path = preg_replace('/^(\/[^\?&#]+)?.*?$/', '\1', self::uri()) : self::$path;
     }
+
+    // ----------------------------------------------------------------------
+    //  定位路由
+    // ----------------------------------------------------------------------
 
     // 路由(是否包含入口)
     static function uri($pre = false)
@@ -77,11 +96,19 @@ class Request
         return ($pre ? PRE_B : '') . self::$uri;
     }
 
+    // ----------------------------------------------------------------------
+    //  定位路由
+    // ----------------------------------------------------------------------
+
     // 请求网址
     static function url($http = false)
     {
         return is_null(self::$url) ? self::$url = ($http ? self::http(true) : '') . self::host() . self::uri(true) : self::$url;
     }
+
+    // ----------------------------------------------------------------------
+    //  定位路由
+    // ----------------------------------------------------------------------
 
     // 协议名(是否用作URL)
     static function http($url = false)
@@ -89,17 +116,29 @@ class Request
         return (is_null(self::$http) ? self::$http = empty($_SERVER['HTTPS']) || $_SERVER['HTTPS'] === 'off' ? 'http' : 'https' : self::$http) . ($url ? '://' : '');
     }
 
+    // ----------------------------------------------------------------------
+    //  定位路由
+    // ----------------------------------------------------------------------
+
     // 域名端口
     static function host()
     {
         return is_null(self::$host) ? self::$host = isset($_SERVER['HTTP_HOST']) ? $_SERVER['HTTP_HOST'] : '' : self::$host;
     }
 
+    // ----------------------------------------------------------------------
+    //  定位路由
+    // ----------------------------------------------------------------------
+
     // 获取请求方法
     static function method()
     {
         return is_null(self::$method) ? self::$method = $_SERVER['REQUEST_METHOD'] : self::$method;
     }
+
+    // ----------------------------------------------------------------------
+    //  定位路由
+    // ----------------------------------------------------------------------
 
     // 返回GET数据
     static function get($key = false)
@@ -108,12 +147,20 @@ class Request
         return $key ? key_exists($key, self::$get) ? self::$get[$key] : null : self::$get;
     }
 
+    // ----------------------------------------------------------------------
+    //  定位路由
+    // ----------------------------------------------------------------------
+
     // 返回POST数据
     static function post($key = false)
     {
         is_null(self::$post) && self::$post = Safe::initData($_POST);
         return $key ? key_exists($key, self::$post) ? self::$post[$key] : null : self::$post;
     }
+
+    // ----------------------------------------------------------------------
+    //  定位路由
+    // ----------------------------------------------------------------------
 
     // 返回客户端IP
     static function ip()
@@ -133,6 +180,10 @@ class Request
         }
         return self::$ip;
     }
+
+    // ----------------------------------------------------------------------
+    //  定位路由
+    // ----------------------------------------------------------------------
 
     // 判断是否移动端
     static function mobile()

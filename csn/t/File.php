@@ -2,10 +2,13 @@
 
 namespace csn;
 
-class File
+final class File
 {
 
-    // 创建目录
+    // ----------------------------------------------------------------------
+    //  创建目录
+    // ----------------------------------------------------------------------
+
     static function mkDir($dir)
     {
         if (is_array($dir)) {
@@ -17,23 +20,29 @@ class File
         }
     }
 
-    // 删除目录
+    // ----------------------------------------------------------------------
+    //  删除目录：路径、是否包含文件
+    // ----------------------------------------------------------------------
+
     static function rmDir($path, $both = false)
     {
         if (is_dir($path)) {
             $dir = dir($path);
             while (false !== ($p = $dir->read())) {
                 if ($p === '.' || $p === '..') continue;
-                self::rmDir($path . XG. $p, $both);
+                self::rmDir($path . DS. $p, $both);
             }
             $dir->close();
-            rmdir($path);
+            @rmdir($path);
         } elseif ($both && is_file($path)) {
             unlink($path);
         }
     }
 
-    // 目录及文件详情
+    // ----------------------------------------------------------------------
+    //  目录及文件详情
+    // ----------------------------------------------------------------------
+
     static function lists($path)
     {
         $list = ['path' => $path];
@@ -44,7 +53,7 @@ class File
             $dir = dir($path);
             while (false !== ($p = $dir->read())) {
                 if ($p === '.' || $p === '..') continue;
-                $l = self::lists($path . XG . $p);
+                $l = self::lists($path . DS . $p);
                 $size += $l['size'];
                 $down[] = $l;
             }
@@ -60,28 +69,40 @@ class File
         return $list;
     }
 
-    // 写入内容
+    // ----------------------------------------------------------------------
+    //  写入内容
+    // ----------------------------------------------------------------------
+
     static function write($file, $text = '', $force = false)
     {
         self::mkDir(dirname($file));
         ($force || !is_file($file)) && file_put_contents($file, $text, LOCK_EX);
     }
 
-    // 追加内容
+    // ----------------------------------------------------------------------
+    //  追加内容
+    // ----------------------------------------------------------------------
+
     static function append($file, $text = '')
     {
         self::mkDir(dirname($file));
         file_put_contents($file, $text, FILE_APPEND);
     }
 
-    // 复制文件
+    // ----------------------------------------------------------------------
+    //  复制文件
+    // ----------------------------------------------------------------------
+
     static function copy($from, $to, $force = false)
     {
         self::mkDir(dirname($to));
         ($force || !is_file($to)) && copy($from, $to);
     }
 
-    // 批量复制文件
+    // ----------------------------------------------------------------------
+    //  批量复制文件
+    // ----------------------------------------------------------------------
+
     static function copies($copy, $force = false)
     {
         foreach ($copy as $from => $to) {
