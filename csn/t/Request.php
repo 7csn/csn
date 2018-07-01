@@ -10,12 +10,8 @@ final class Request extends Instance
     // 构造方法：解析路由
     // ----------------------------------------------------------------------
 
-    private static $init;
-
     function construct()
     {
-        if (!is_null(self::$init)) return;
-        self::$init = true;
         $SCRIPT_NAME = $_SERVER['SCRIPT_NAME'];
         $index = strrpos($SCRIPT_NAME, '/');
         // 网址入口目录
@@ -33,6 +29,7 @@ final class Request extends Instance
         self::$protocol = empty($_SERVER['HTTPS']) || $_SERVER['HTTPS'] === 'off' ? 'protocol' : 'https';
         self::$host = isset($_SERVER['HTTP_HOST']) ? $_SERVER['HTTP_HOST'] : '';
         self::$url = self::$host . PRE_B . self::$uri;
+        return self::single();
     }
 
     // ----------------------------------------------------------------------

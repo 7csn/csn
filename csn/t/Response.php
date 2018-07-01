@@ -22,7 +22,7 @@ class Response extends Instance
     function export()
     {
         Route::init();
-        return Route::run(Route::path(Request::path(), true)) . '';
+        return Route::run(Route::path(Request::instance()->path(), true)) . '';
     }
 
 }

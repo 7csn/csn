@@ -54,6 +54,7 @@ class Route
     {
         $path = '@' . str_replace(SP, '@', trim(ltrim(preg_replace('/\.html$/', '', $path), '/'), SP));
         $self && self::$path = $path;
+//        var_dump($path === '@' ? '' : $path);
         return $path === '@' ? '' : $path;
     }
 
@@ -96,7 +97,7 @@ class Route
     // 获取路由
     static function find($path)
     {
-        return self::search($path, Request::method()) ?: self::search($path);
+        return self::search($path, Request::instance()->method()) ?: self::search($path);
     }
 
     // 按方法搜索路由

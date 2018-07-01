@@ -30,7 +30,7 @@ class Runtime
     // 错误日志
     static function bug($info)
     {
-        self::set('bug', date('H:i:s') . ' ' . Request::uri() . "\n\t" . $info . "\n");
+        self::set('bug', date('H:i:s') . ' ' . Request::instance()->uri() . "\n\t" . $info . "\n");
     }
 
     // SQL日志

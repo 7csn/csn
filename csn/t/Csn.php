@@ -38,6 +38,9 @@ final class Csn
         // 初始化密钥文件
         Safe::secretInit();
         // 解析请求并响应
+        Request::instance(22);
+        Request::instance(11);
+        Request::instance(11);
         Request::instance()->response()->export();
     }
 
