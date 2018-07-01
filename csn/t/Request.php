@@ -1,169 +1,155 @@
 <?php
 
+
 namespace csn;
 
-final class Request
+final class Request extends Instance
 {
 
-    static protected $uri;
-    static protected $url;
-    static protected $http;
-    static protected $host;
-    static protected $method;
-    static protected $ip;
-    static protected $get;
-    static protected $post;
-
     // ----------------------------------------------------------------------
-    //  模块、控制器、方法
+    // 构造方法：解析路由
     // ----------------------------------------------------------------------
 
-    static $module;                 // 模块
+    private static $init;
 
-    static $controller;             // 控制器
-
-    static $action;                 // 方法
-
-    // ----------------------------------------------------------------------
-    //  实例
-    // ----------------------------------------------------------------------
-
-    protected static $instance;
-
-    static function instance()
+    function construct()
     {
-        return is_null(self::$instance) ? self::$instance = new self : self::$instance;
+        if (!is_null(self::$init)) return;
+        self::$init = true;
+        $SCRIPT_NAME = $_SERVER['SCRIPT_NAME'];
+        $index = strrpos($SCRIPT_NAME, '/');
+        // 网址入口目录
+        define('PRE_F', substr($SCRIPT_NAME, 0, $index));
+        // 网址前缀入口
+        define('PRE_B', Conf::web('rewrite') ? PRE_F : $SCRIPT_NAME);
+        $file = substr($SCRIPT_NAME, $index);
+        $len = strlen($file);
+        $uri = isset($_SERVER['REQUEST_URI']) ? $_SERVER['REQUEST_URI'] : $_SERVER['PHP_SELF'] . $_SERVER['QUERY_STRING'];
+        substr($uri, 0, $index) === PRE_F && $uri = substr($uri, $index);
+        substr($uri, 0, $len) === $file && $uri = substr($uri, $len);
+        // 路由
+        self::$uri = $uri;
+        self::$path = preg_replace('/^(\/[^\?&#]+)?.*?$/', '\1', $uri);
+        self::$protocol = empty($_SERVER['HTTPS']) || $_SERVER['HTTPS'] === 'off' ? 'protocol' : 'https';
+        self::$host = isset($_SERVER['HTTP_HOST']) ? $_SERVER['HTTP_HOST'] : '';
+        self::$url = self::$host . PRE_B . self::$uri;
     }
 
     // ----------------------------------------------------------------------
     //  响应
     // ----------------------------------------------------------------------
 
-    static function response()
+    function response()
     {
-        return Controller::model('Response');
+        return Response::instance();
     }
 
     // ----------------------------------------------------------------------
-    //  解析路由
+    //  协议头：是否用作网址
     // ----------------------------------------------------------------------
 
-    static function parse()
+    private static $protocol;
+
+    function protocol($url = false)
     {
-        File::copy(CSN_X . 'route.php', APP . 'route.php');
-        Csn::need(APP . 'route.php');
-        $request = self::instance();
-        $request->path();
-
-
-
-
-        return $request;
+        return self::$protocol . ($url ? '://' : '');
     }
 
     // ----------------------------------------------------------------------
-    //  定位路由
+    //  主机名
     // ----------------------------------------------------------------------
 
-    protected static $path;
+    private static $host;
 
-    static function path()
+    function host()
     {
-        return is_null(self::$path) ? self::$path = preg_replace('/^(\/[^\?&#]+)?.*?$/', '\1', self::uri()) : self::$path;
+        return self::$host;
     }
 
     // ----------------------------------------------------------------------
-    //  定位路由
+    //  基本路由：是否包含入口
     // ----------------------------------------------------------------------
 
-    // 路由(是否包含入口)
-    static function uri($pre = false)
+    private static $uri;
+
+    function uri($pre = false)
     {
-        if (is_null(self::$uri)) {
-            $SCRIPT_NAME = $_SERVER['SCRIPT_NAME'];
-            $index = strrpos($SCRIPT_NAME, '/');
-            // 网址入口目录
-            define('PRE_F', substr($SCRIPT_NAME, 0, $index));
-            // 网址前缀入口
-            define('PRE_B', Conf::web('rewrite') ? PRE_F : $SCRIPT_NAME);
-            $me = substr($SCRIPT_NAME, $index);
-            $len = strlen($me);
-            $uri = isset($_SERVER['REQUEST_URI']) ? $_SERVER['REQUEST_URI'] : $_SERVER['PHP_SELF'] . (isset($_SERVER['argv']) ? $_SERVER['argv'][0] : $_SERVER['QUERY_STRING']);
-            substr($uri, 0, $index) === PRE_F && $uri = substr($uri, $index);
-            substr($uri, 0, $len) === $me && $uri = substr($uri, $len);
-            self::$uri = $uri;
-        }
         return ($pre ? PRE_B : '') . self::$uri;
     }
 
     // ----------------------------------------------------------------------
-    //  定位路由
+    //  关键路由
     // ----------------------------------------------------------------------
 
-    // 请求网址
-    static function url($http = false)
+    private static $path;
+
+    function path()
     {
-        return is_null(self::$url) ? self::$url = ($http ? self::http(true) : '') . self::host() . self::uri(true) : self::$url;
+        return self::$path;
     }
 
     // ----------------------------------------------------------------------
-    //  定位路由
+    //  当前网址：是否包含协议头
     // ----------------------------------------------------------------------
 
-    // 协议名(是否用作URL)
-    static function http($url = false)
+    private static $url;
+
+    function url($protocol = false)
     {
-        return (is_null(self::$http) ? self::$http = empty($_SERVER['HTTPS']) || $_SERVER['HTTPS'] === 'off' ? 'http' : 'https' : self::$http) . ($url ? '://' : '');
+        return ($protocol ? $this->protocol(true) : '') . self::$url;
     }
 
     // ----------------------------------------------------------------------
-    //  定位路由
+    //  请求方式
     // ----------------------------------------------------------------------
 
-    // 域名端口
-    static function host()
+    // 请求方法
+    function method()
     {
-        return is_null(self::$host) ? self::$host = isset($_SERVER['HTTP_HOST']) ? $_SERVER['HTTP_HOST'] : '' : self::$host;
+        return $_SERVER['REQUEST_METHOD'];
+    }
+
+    // 是否POST提交
+    function isPost()
+    {
+        return $this->method() === 'POST';
+    }
+
+    // 是否AJAX提交
+    function isAjax()
+    {
+
     }
 
     // ----------------------------------------------------------------------
-    //  定位路由
+    //  参数：GET、POST、REQUEST
     // ----------------------------------------------------------------------
 
-    // 获取请求方法
-    static function method()
+    function get($key = false)
     {
-        return is_null(self::$method) ? self::$method = $_SERVER['REQUEST_METHOD'] : self::$method;
-    }
-
-    // ----------------------------------------------------------------------
-    //  定位路由
-    // ----------------------------------------------------------------------
-
-    // 返回GET数据
-    static function get($key = false)
-    {
+//        return $key ?
         is_null(self::$get) && self::$get = Safe::initData($_GET);
         return $key ? key_exists($key, self::$get) ? self::$get[$key] : null : self::$get;
     }
 
-    // ----------------------------------------------------------------------
-    //  定位路由
-    // ----------------------------------------------------------------------
-
-    // 返回POST数据
-    static function post($key = false)
+    function post($key = false)
     {
         is_null(self::$post) && self::$post = Safe::initData($_POST);
         return $key ? key_exists($key, self::$post) ? self::$post[$key] : null : self::$post;
     }
 
+    function param($key = false)
+    {
+
+    }
+
     // ----------------------------------------------------------------------
-    //  定位路由
+    //  客户端IP
     // ----------------------------------------------------------------------
 
-    // 返回客户端IP
-    static function ip()
+    private static $ip;
+
+    function ip()
     {
         if (is_null(self::$ip)) {
             if (getenv('HTTP_CLIENT_IP') && strcasecmp(getenv('HTTP_CLIENT_IP'), 'unknown')) {
@@ -182,11 +168,10 @@ final class Request
     }
 
     // ----------------------------------------------------------------------
-    //  定位路由
+    //  判断是否移动端
     // ----------------------------------------------------------------------
 
-    // 判断是否移动端
-    static function mobile()
+    function mobile()
     {
         if (isset($_SERVER['HTTP_X_WAP_PROFILE'])) {
             return true;

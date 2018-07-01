@@ -2,7 +2,7 @@
 
 namespace csn;
 
-class Conf
+class Conf extends Instance
 {
 
     protected static $init;             // 初始化项目配置文件

@@ -2,7 +2,7 @@
 
 namespace csn;
 
-class Api
+class Api extends Instance
 {
 
 

@@ -2,11 +2,26 @@
 
 namespace csn;
 
-class Response
+class Response extends Instance
 {
 
-    function __toString()
+    // ----------------------------------------------------------------------
+    //  模块、控制器、方法
+    // ----------------------------------------------------------------------
+
+    static $module;                 // 模块
+
+    static $controller;             // 控制器
+
+    static $action;                 // 方法
+
+    // ----------------------------------------------------------------------
+    //  输出
+    // ----------------------------------------------------------------------
+
+    function export()
     {
+        Route::init();
         return Route::run(Route::path(Request::path(), true)) . '';
     }
 

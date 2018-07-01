@@ -2,7 +2,7 @@
 
 namespace csn;
 
-class Exp
+class Exp extends Instance
 {
 
     protected static $instance;             // 当前对象
@@ -19,12 +19,6 @@ class Exp
         'Warning' => [E_WARNING, E_CORE_WARNING, E_COMPILE_WARNING, E_USER_WARNING],
         'Notice' => [E_NOTICE, E_USER_NOTICE],
     ];
-
-    // 单例对象
-    protected static function instance()
-    {
-        return is_null(self::$instance) ? self::$instance = new self() : self::$instance;
-    }
 
     // 自定义错误(非致命)处理
     static function error($code, $msg, $file, $line)

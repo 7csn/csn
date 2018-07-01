@@ -11,8 +11,10 @@ return [
     'charset' => 'UTF-8',
     // 路由分隔符
     'separator' => '/',
-    // 静态页缓存时间
+    // 静态页缓存时间(s)
     'view_cache' => 60,
-    // 58编码字符
-    'base58' => '123456789abcdefghijkmnopqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ'
+    // 安全密钥
+    'safe_key' => 'Csn-tsyx',
+    // 基础编码字符集
+    'base_code' => '123456789abcdefghijkmnopqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ'
 ];

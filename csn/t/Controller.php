@@ -9,14 +9,29 @@ class Controller
     //  获取模型(框架核心、框架外调、项目)
     // ----------------------------------------------------------------------
 
-    protected static $models = [];
-
-    final static function model($name, $args = [], $type = '')
+    final static function core($name, $args = [])
     {
-        in_array($type, ['', 'y', 'm']) || Exp::end('框架模型类不合格');
-        $class = ($type ? $type === 'm' ? 'app\\m' : 'csn\\y' : 'csn') . '\\' . $name;
-        key_exists($class, self::$models) && self::$models[$class]['args'] === $args || self::$models[$class] = ['obj' => (new \ReflectionClass($class))->newInstanceArgs($args), 'args' => $args];
-        return self::$models[$class]['obj'];
+        return Instance::create('csn\\', $name, $args);
+    }
+
+    final static function other($name, $args = [])
+    {
+        return Instance::create('csn\y\\', $name, $args);
+    }
+
+    final static function app($name, $args = [])
+    {
+        return Instance::create('app\m\\', $name, $args);
+    }
+
+    // ----------------------------------------------------------------------
+    //  获取祖先类名
+    // ----------------------------------------------------------------------
+
+    final static function ancestor($name)
+    {
+        $parent = get_parent_class($name);
+        return $parent ? self::ancestor($parent) : $name;
     }
 
     // ----------------------------------------------------------------------
@@ -101,5 +116,6 @@ class Controller
                 return is_string($back) ? $back : json_encode($back);
         }
     }
+
 
 }

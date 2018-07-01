@@ -38,7 +38,7 @@ final class Csn
         // 初始化密钥文件
         Safe::secretInit();
         // 解析请求并响应
-        exit(Request::parse()->response());
+        Request::instance()->response()->export();
     }
 
     // ----------------------------------------------------------------------
@@ -53,38 +53,31 @@ final class Csn
     }
 
     // ----------------------------------------------------------------------
-    //  类文件自加载(框架、项目)
+    //  类(模型：框架外调、框架核心、项目)文件自加载
     // ----------------------------------------------------------------------
 
-    // 类库
-    protected static $loads = ['csn\y\\' => [], 'csn\\' => [], 'app\m\\' => [], 'app\\' => []];
-
     // 对照表：类名前缀=>路径前缀
-    protected static $class = ['csn\y\\' => CSN_Y, 'csn\\' => CSN_T, 'app\m\\' => APP_MODEL, 'app\\' => APP];
+    protected static $load = ['csn\y\\' => CSN_Y, 'csn\\' => CSN_T, 'app\m\\' => APP_MODEL];
 
     // 类自加载
     static function load($class)
     {
-        if (is_null($res = self::search($class))) return;
-        $type = $res[0];
-        $name = str_replace('\\', DS, str_replace($type, '', $class));
-        $file = $res[1] . $name . '.php';
-        in_array($name, self::$loads[$type]) && Exp::end('类' . $class . '异常');
+        if (is_null($search = self::search($class))) return;
+        $file = self::$load[$search[0]] . str_replace('\\', DS, $search[1]) . '.php';
         is_file($file) ? self::need($file) : Exp::end('找不到类' . $class);
-        self::$loads[$type][] = $name;
     }
 
     // 检索类名前缀与路径前缀
-    protected static function search($str)
+    static function search($class)
     {
         $res = null;
-        foreach (self::$class as $k => $v) {
-            if (strpos($str, $k) === 0) {
-                $res = [$k, $v];
+        foreach (self::$load as $k => $v) {
+            if (strpos($class, $k) === 0) {
+                $res = [$k, str_replace($k, '', $class)];
                 break;
             }
         }
-        reset(self::$class);
+        reset(self::$load);
         return $res;
     }
 

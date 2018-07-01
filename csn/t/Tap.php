@@ -2,7 +2,7 @@
 
 namespace csn;
 
-class Tap
+class Tap extends Instance
 {
 
     protected $method;      // 路由方法
@@ -12,7 +12,7 @@ class Tap
     protected $cache;       // 静态页缓存时效
 
     // 开关对象
-    function __construct($method, $path)
+    function construct($method, $path)
     {
         $this->method = $method;
         $this->path = $path;

@@ -9,6 +9,13 @@ class Route
     static $path;       // 当前访问路由
     static $tap = [];   // 路由控制数组
 
+    // 路由文件初始化
+    static function init()
+    {
+        File::copy(CSN_X . 'route.php', APP . 'route.php');
+        Csn::need(APP . 'route.php');
+    }
+
     // 设置GET路由
     static function get($path, $point)
     {
@@ -66,7 +73,7 @@ class Route
     // 路由控制对象
     protected static function tap()
     {
-        return Controller::model('Tap', func_get_args());
+        return Controller::core('Tap', func_get_args());
     }
 
     // 执行控制器方法
@@ -74,8 +81,6 @@ class Route
     {
         $search = self::find($path);
         is_null($search) && Exp::end('路由未定义或有误');
-        // 检测密钥
-        Safe::secret();
         // 访问日志
         Runtime::act();
         $point = $search['point'];

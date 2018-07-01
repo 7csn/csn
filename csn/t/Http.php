@@ -2,7 +2,7 @@
 
 namespace csn;
 
-class Http
+class Http extends Instance
 {
 
     protected $host;        // 连接地址

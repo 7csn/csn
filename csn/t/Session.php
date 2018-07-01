@@ -2,7 +2,7 @@
 
 namespace csn;
 
-class Session
+class Session extends Instance
 {
 
     static $init;   // session配置初始化

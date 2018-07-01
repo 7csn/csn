@@ -2,47 +2,39 @@
 
 namespace csn;
 
-class Safe
+final class Safe
 {
 
-    protected static $key;      // 密钥
-    protected static $lock;     // 密锁串(包含base64所有字符且不重复)
-    protected static $secret;   // 密锁钥数组
-    protected static $safe;     // 验证规则数组
+    // ----------------------------------------------------------------------
+    //  密锁
+    // ----------------------------------------------------------------------
 
-    // 加载密钥
+    // 数组
+    protected static $secret;
+
+    // 读取
     static function get($name = null)
     {
-        is_null(self::$secret) && self::$secret = parse_ini_file(APP . 'secret.ini');
+        if (is_null(self::$secret)) {
+            $file = APP . 'secret.ini';
+            is_file($file) && Exp::end('未检测到密钥文件，请先创建');
+            self::$secret = parse_ini_file($file);
+        }
         return is_null($name) ? self::$secret : self::$secret[$name];
     }
 
-    // 检查密钥
-    static function secret()
+    // 初始化文件：是否重置
+    static function secretInit($anew = false)
     {
-        $file = APP . 'secret.ini';
-        is_file($file) || Exp::end('未检测到密钥文件，请先创建');
-        $secret = parse_ini_file($file);
-        key_exists('key', $secret) && key_exists('lock', $secret) && strlen($secret['key']) === 32 && strlen($secret['lock']) === 58 || Exp::end('密钥文件异常');
+        File::write(APP . 'secret.ini', "key='" . md5(Conf::web('safe_key')) . "'\nlock='" . str_shuffle(Conf::web('base_code')) . "'", $anew);
     }
 
-    // 初始化密钥
-    static function secretInit()
-    {
-        File::write(APP . 'secret.ini', "key='" . md5(uniqid()) . "'\nlock='" . str_shuffle(Conf::web('base58')) . "'");
-    }
+    // ----------------------------------------------------------------------
+    //  正则验证
+    // ----------------------------------------------------------------------
 
-    // 正则验证
-    static function __callStatic($name, $args)
-    {
-        self::filter();
-        if (key_exists($name, self::$safe)) {
-            $point = self::$safe[$name];
-            return is_string($point) ? preg_match($point, $args[0]) : call_user_func_array($point, $args);
-        } else {
-            Exp::end('验证函数' . $name . '无效，请检查safe配置文件');
-        }
-    }
+    // 验证规则数组
+    protected static $safe;
 
     // 获取验证规则
     protected static function filter()
@@ -60,7 +52,22 @@ class Safe
         return $safe;
     }
 
-    // 生成验证码及图片
+    //
+    static function __callStatic($name, $args)
+    {
+        self::filter();
+        if (key_exists($name, self::$safe)) {
+            $point = self::$safe[$name];
+            return is_string($point) ? preg_match($point, $args[0]) : call_user_func_array($point, $args);
+        } else {
+            Exp::end('验证函数' . $name . '无效，请检查safe配置文件');
+        }
+    }
+
+    // ----------------------------------------------------------------------
+    //  生成验证码及图片
+    // ----------------------------------------------------------------------
+
     static function imgCode($len = 4, $width = 160, $height = 50, $size = 20)
     {
         // 生成背景
@@ -97,7 +104,10 @@ class Safe
         return $obj;
     }
 
-    // 加密
+    // ----------------------------------------------------------------------
+    //  加密、解密
+    // ----------------------------------------------------------------------
+
     static function encode($str)
     {
         if (mb_strlen($str) <= 1) return '';
@@ -108,7 +118,7 @@ class Safe
         $lk = $lock[$rand];
         // 密钥结合密锁随机值MD5加密
         $md5 = strtoupper(md5(self::get('key') . $lk));
-        // 字符串BASE64加密
+        // 字符串基础加密
         $str = self::en($str);
         $res = '';
         for ($i = $k = 0, $c = strlen($str); $i < $c; $i++) {
@@ -121,12 +131,9 @@ class Safe
         return $res . $lk;
     }
 
-    // 解密
     static function decode($str)
     {
         if (mb_strlen($str) <= 1) return '';
-        // 将地址栏参数被强制转换的空格替换成+号
-        $str = str_replace(' ', '+', $str);
         // 密锁串、长度、随机位及值
         $lock = self::get('lock');
         $len = strlen($lock);
@@ -150,80 +157,14 @@ class Safe
             $tmpStream .= $lock[$j];
             $k++;
         }
-        // 返回BASE64解密源字符串
+        // 返回基础解密源字符串
         return self::de($tmpStream);
     }
 
-    // 生成登录ID
-    static function eLoginId($str)
-    {
-        return self::encode(CSN_TIME . '.' . chr(mt_rand(97, 122)) . '.' . $str);
-    }
+    // ----------------------------------------------------------------------
+    //  基础加密、基础解密
+    // ----------------------------------------------------------------------
 
-    // 登录ID解码
-    static function dLoginId($loginId, $time = 7200)
-    {
-        $arr = explode('.', self::decode($loginId));
-        return count($arr) === 3 && is_numeric($t = $arr[0]) ? ($t <= CSN_TIME && $t + $time > CSN_TIME) ? $arr[2] : 0 : false;
-    }
-
-    // 添加转义字符
-    static function addSlashes($data)
-    {
-        if (is_array($data)) {
-            foreach ($data as $k => $v) {
-                $data[$k] = self::addSlashes($v);
-            }
-        } else {
-            $data = addslashes(trim($data));
-        }
-        return $data;
-    }
-
-    // 去除转义字符
-    static function stripSlashes($data)
-    {
-        if (is_array($data)) {
-            foreach ($data as $k => $v) {
-                $data[$k] = self::stripSlashes($v);
-            }
-        } else {
-            $data = stripSlashes(trim($data));
-        }
-        return $data;
-    }
-
-    // 初始化数据
-    static function initData($data)
-    {
-        if (is_array($data)) {
-            foreach ($data as $k => $v) {
-                if (self::isKey($k) === false) {
-                    unset($data[$k]);
-                } else {
-                    $data[$k] = self::initData($v);
-                }
-            }
-            return $data;
-        } else {
-            return is_numeric($data) ? $data[0] === 0 || strlen($data) >= 11 ? self::addSlashes(htmlspecialchars($data)) : (strpos($data, '.') ? floatval($data) : $data) : (is_string($data) ? self::addSlashes(htmlspecialchars($data)) : (is_bool($data) ? (bool)$data : false));
-        }
-    }
-
-    // 恢复数据
-    static function backData($data)
-    {
-        if (is_array($data)) {
-            foreach ($data as $k => $v) {
-                $data[$k] = self::backData($v);
-            }
-            return $data;
-        } else {
-            return is_string($data) ? htmlspecialchars_decode(stripSlashes($data)) : $data;
-        }
-    }
-
-    // 加密
     static function en($str)
     {
         // 加密条件：非空字符串
@@ -257,7 +198,6 @@ class Safe
         return (string)$res;
     }
 
-    // 解密
     static function de($str)
     {
         // 解密条件：非空字符串
@@ -292,6 +232,93 @@ class Safe
             break;
         }
         return $res;
+    }
+
+    // ----------------------------------------------------------------------
+    //  生成登录ID
+    // ----------------------------------------------------------------------
+
+    static function eLoginId($str)
+    {
+        return self::encode(CSN_TIME . '.' . chr(mt_rand(97, 122)) . '.' . $str);
+    }
+
+    // ----------------------------------------------------------------------
+    //  登录ID解码
+    // ----------------------------------------------------------------------
+
+    static function dLoginId($loginId, $time = 7200)
+    {
+        $arr = explode('.', self::decode($loginId));
+        return count($arr) === 3 && is_numeric($t = $arr[0]) ? ($t <= CSN_TIME && $t + $time > CSN_TIME) ? $arr[2] : 0 : false;
+    }
+
+    // ----------------------------------------------------------------------
+    //  添加转义字符
+    // ----------------------------------------------------------------------
+
+    static function addSlashes($data)
+    {
+        if (is_array($data)) {
+            foreach ($data as $k => $v) {
+                $data[$k] = self::addSlashes($v);
+            }
+        } else {
+            $data = addslashes(trim($data));
+        }
+        return $data;
+    }
+
+    // ----------------------------------------------------------------------
+    //  去除转义字符
+    // ----------------------------------------------------------------------
+
+    static function stripSlashes($data)
+    {
+        if (is_array($data)) {
+            foreach ($data as $k => $v) {
+                $data[$k] = self::stripSlashes($v);
+            }
+        } else {
+            $data = stripSlashes(trim($data));
+        }
+        return $data;
+    }
+
+    // ----------------------------------------------------------------------
+    //  初始化数据
+    // ----------------------------------------------------------------------
+
+    static function initData($data)
+    {
+        if (is_array($data)) {
+            foreach ($data as $k => $v) {
+                if (self::isKey($k) === false) {
+                    unset($data[$k]);
+                } else {
+                    $data[$k] = self::initData($v);
+                }
+            }
+            return $data;
+        } else {
+            return is_numeric($data) ? $data[0] === 0 || strlen($data) >= 11 ? self::addSlashes(htmlspecialchars($data)) : (strpos($data, '.') ? floatval($data) : $data) : (is_string($data) ? self::addSlashes(htmlspecialchars($data)) : (is_bool($data) ? (bool)$data : false));
+        }
+    }
+
+    // ----------------------------------------------------------------------
+    //  恢复数据
+    // ----------------------------------------------------------------------
+
+    static function backData($data)
+    {
+        if (is_array($data)) {
+            foreach ($data as $k => $v) {
+                $data[$k] = self::backData($v);
+            }
+            return $data;
+        } else {
+            return is_string($data) ? htmlspecialchars_decode(stripSlashes($data)) : $data;
+        }
     }
 
 }
