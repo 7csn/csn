@@ -7,7 +7,7 @@ final class Request extends Instance
 {
 
     // ----------------------------------------------------------------------
-    // 构造方法：解析路由
+    //  构造方法：解析路由
     // ----------------------------------------------------------------------
 
     function construct()
@@ -24,11 +24,11 @@ final class Request extends Instance
         substr($uri, 0, $index) === PRE_F && $uri = substr($uri, $index);
         substr($uri, 0, $len) === $file && $uri = substr($uri, $len);
         // 路由
-        self::$uri = $uri;
-        self::$path = preg_replace('/^(\/[^\?&#]+)?.*?$/', '\1', $uri);
-        self::$protocol = empty($_SERVER['HTTPS']) || $_SERVER['HTTPS'] === 'off' ? 'protocol' : 'https';
-        self::$host = isset($_SERVER['HTTP_HOST']) ? $_SERVER['HTTP_HOST'] : '';
-        self::$url = self::$host . PRE_B . self::$uri;
+        $this->uri = $uri;
+        $this->path = preg_replace('/\.html$/', '', preg_replace('/^(\/[^\?&#]+)?.*?$/', '\1', $uri));
+        $this->protocol = empty($_SERVER['HTTPS']) || $_SERVER['HTTPS'] === 'off' ? 'protocol' : 'https';
+        $this->host = isset($_SERVER['HTTP_HOST']) ? $_SERVER['HTTP_HOST'] : '';
+        $this->url = $this->host . PRE_B . $uri;
         return self::single();
     }
 
@@ -45,55 +45,55 @@ final class Request extends Instance
     //  协议头：是否用作网址
     // ----------------------------------------------------------------------
 
-    private static $protocol;
+    private $protocol;
 
     function protocol($url = false)
     {
-        return self::$protocol . ($url ? '://' : '');
+        return $this->protocol . ($url ? '://' : '');
     }
 
     // ----------------------------------------------------------------------
     //  主机名
     // ----------------------------------------------------------------------
 
-    private static $host;
+    private $host;
 
     function host()
     {
-        return self::$host;
+        return $this->host;
     }
 
     // ----------------------------------------------------------------------
     //  基本路由：是否包含入口
     // ----------------------------------------------------------------------
 
-    private static $uri;
+    private $uri;
 
     function uri($pre = false)
     {
-        return ($pre ? PRE_B : '') . self::$uri;
+        return ($pre ? PRE_B : '') . $this->uri;
     }
 
     // ----------------------------------------------------------------------
     //  关键路由
     // ----------------------------------------------------------------------
 
-    private static $path;
+    private $path;
 
     function path()
     {
-        return self::$path;
+        return $this->path;
     }
 
     // ----------------------------------------------------------------------
     //  当前网址：是否包含协议头
     // ----------------------------------------------------------------------
 
-    private static $url;
+    private $url;
 
     function url($protocol = false)
     {
-        return ($protocol ? $this->protocol(true) : '') . self::$url;
+        return ($protocol ? $this->protocol(true) : '') . $this->url;
     }
 
     // ----------------------------------------------------------------------

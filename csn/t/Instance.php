@@ -29,32 +29,14 @@ class Instance
     private static $instances = ['csn\y\\' => [], 'csn\\' => [], 'app\m\\' => []];
 
     // ----------------------------------------------------------------------
-    //  实例性质
-    // ----------------------------------------------------------------------
-
-    // 单例(single)、同参缓存(true)、不缓存(false)
-    public static $instanceCache = true;
-
-    // 列表
-    private static $cacheTypes = [];
-
-    // 获取
-    final static function getCacheTypes($class)
-    {
-        return key_exists($class, self::$cacheTypes) ? self::$cacheTypes[$class] : self::$cacheTypes[$class] = (new \ReflectionProperty($class, 'instanceCache'))->getValue();
-    }
-
-    // ----------------------------------------------------------------------
     //  创建实例
     // ----------------------------------------------------------------------
 
     final static function instance()
     {
-        $class = get_called_class();
-        if (is_null($search = Csn::search($class))) return;
+        if (is_null($search = Csn::search(get_called_class()))) return;
         list($type, $name) = $search;
-        $args = func_get_args();
-        return self::create($type, $name, $args);
+        return self::create($type, $name, func_get_args());
     }
 
     final static function create($type, $name, $args)
@@ -65,7 +47,7 @@ class Instance
         } else {
             $obj = new $class();
             method_exists($obj, 'construct') && $cache = call_user_func_array([$obj, 'construct'], $args);
-            if (!isset($cache) || is_null($cache)) $cache = self::getCacheTypes($class);
+            if (!isset($cache) || is_null($cache)) $cache = true;
             self::$instances[$type][$name] = ['obj' => $obj, 'args' => $args, 'cache' => $cache];
         }
         return $obj;

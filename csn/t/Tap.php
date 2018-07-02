@@ -2,21 +2,30 @@
 
 namespace csn;
 
-class Tap extends Instance
+final class Tap extends Instance
 {
 
-    protected $method;      // 路由方法
-    protected $path;        // 路由标记
-    protected $where = [];  // 参数正则
-    protected $input = [];  // POST验证
-    protected $cache;       // 静态页缓存时效
+    // ----------------------------------------------------------------------
+    //  构造方法：标记方法与路由
+    // ----------------------------------------------------------------------
 
-    // 开关对象
+    protected $method;
+
+    protected $path;
+
     function construct($method, $path)
     {
         $this->method = $method;
         $this->path = $path;
+        return true;
     }
+
+    // ----------------------------------------------------------------------
+    //  正则条件：参数=>正则
+    // ----------------------------------------------------------------------
+
+    // 路由正则数组
+    protected $where = [];
 
     // 路由正则条件
     function where($key, $preg = null)
@@ -26,10 +35,13 @@ class Tap extends Instance
             $this->where[$key] = $preg;
         }
         foreach ($this->method as $method) {
-            Route::$tap[$method][$this->path]['where'] = $this->where;
+            Route::$taps[$method][$this->path]['where'] = $this->where;
         }
         return $this;
     }
+
+    // POST正则数组
+    protected $input = [];
 
     // POST正则条件
     function input($key, $preg = null)
@@ -39,26 +51,34 @@ class Tap extends Instance
             foreach ($input as $key => $preg) {
                 $this->input[$key] = $preg;
             }
-            Route::$tap['POST'][$this->path]['input'] = $this->input;
+            Route::$taps['POST'][$this->path]['input'] = $this->input;
         }
         return $this;
     }
 
-    // 路由正则条件解析
-    function parse($show = false)
+    // ----------------------------------------------------------------------
+    //  正则条件解析
+    // ----------------------------------------------------------------------
+
+    function parse()
     {
         $path = str_replace('/', '\\/', $this->path);
         foreach ($this->where as $key => $preg) {
             $path = str_replace(['{' . $key . '}', '@{' . $key . '?}'], ['(' . $preg . ')', '(@' . $preg . ')?'], $path);
         }
         foreach ($this->method as $method) {
-            Route::$tap[$method][$this->path]['preg'] = $path;
-            Route::$tap[$method][$this->path]['parse'] = true;
+            Route::$taps[$method][$this->path]['preg'] = $path;
+            Route::$taps[$method][$this->path]['parse'] = true;
         }
-        return $show ? $path : $this;
+        return $this;
     }
 
-    // 静态页缓存时效
+    // ----------------------------------------------------------------------
+    //  静态页缓存时效
+    // ----------------------------------------------------------------------
+
+    protected $cache;
+
     function cache($time = 0)
     {
         $this->cache = $time;

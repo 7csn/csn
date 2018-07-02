@@ -38,16 +38,16 @@ class Controller
     //  获取项目控制器对象
     // ----------------------------------------------------------------------
 
-    protected static $actions = [];
+    protected static $controllers = [];
 
-    final static function action($controller, $module = false)
+    final static function controller($controller, $module = '')
     {
-        $name = ($module ? DS . str_replace('/', DS, $module) : '') . DS . $controller;
-        key_exists($controller, self::$actions) && self::$actions[$controller]['name'] === $name && Exp::end('禁止跨模块引入同名控制器');
-        Csn::need(APP_CONTROLLER . $name . '.php');
+        $name = ($module ? str_replace('/', DS, $module) . DS : '') . $controller;
+        key_exists($controller, self::$controllers) && self::$controllers[$controller]['name'] === $name && Exp::end('禁止跨模块引入同名控制器');
+        is_file($file = APP_CONTROLLER . $name . '.php') ? Csn::need($file) : Exp::end('控制器' . $name . '不存在');
         $class = '\app\c\\' . $controller;
-        self::$actions[$controller] = ['name' => $name, 'obj' => new $class()];
-        return self::$actions[$controller]['obj'];
+        self::$controllers[$controller] = ['name' => $name, 'obj' => new $class()];
+        return self::$controllers[$controller]['obj'];
     }
 
     // ----------------------------------------------------------------------
@@ -116,6 +116,5 @@ class Controller
                 return is_string($back) ? $back : json_encode($back);
         }
     }
-
 
 }

@@ -22,13 +22,13 @@ class Runtime
     }
 
     // 访问日志
-    static function act()
+    static function action()
     {
         self::set('act');
     }
 
     // 错误日志
-    static function bug($info)
+    static function error($info)
     {
         self::set('bug', date('H:i:s') . ' ' . Request::instance()->uri() . "\n\t" . $info . "\n");
     }

@@ -2,7 +2,7 @@
 
 namespace csn;
 
-class Exp extends Instance
+final class Exp extends Instance
 {
 
     protected static $instance;             // 当前对象
@@ -63,7 +63,7 @@ class Exp extends Instance
         self::pre();
         foreach (self::$error as $error) {
             $info = self::info($error);
-            Runtime::bug($info);
+            Runtime::error($info);
             self::show($info);
             $die = true;
         }
@@ -79,7 +79,7 @@ class Exp extends Instance
     }
 
     // 开发模式调试信息
-    static function open($args, $func)
+    static function open($args, $func = 'print_r')
     {
         self::pre();
         foreach ($args as $arg) {

@@ -2,177 +2,162 @@
 
 namespace csn;
 
-class Route
+final class Route extends Instance
 {
 
-    static $define;     // 当前定义路由
-    static $path;       // 当前访问路由
-    static $tap = [];   // 路由控制数组
+    // ----------------------------------------------------------------------
+    //  构造方法
+    // ----------------------------------------------------------------------
 
-    // 路由文件初始化
-    static function init()
+    function construct()
+    {
+        // 加载路由文件
+        self::loadFile();
+        // 响应路由
+        Response::route(self::find(Request::instance()->path()));
+        // 单例
+        return self::single();
+    }
+
+    // ----------------------------------------------------------------------
+    //  加载路由文件
+    // ----------------------------------------------------------------------
+
+    static function loadFile()
     {
         File::copy(CSN_X . 'route.php', APP . 'route.php');
         Csn::need(APP . 'route.php');
     }
 
-    // 设置GET路由
-    static function get($path, $point)
-    {
-        return self::set('GET', $path, $point);
-    }
+    // ----------------------------------------------------------------------
+    //  规范路由定位
+    // ----------------------------------------------------------------------
 
-    // 设置POST路由
-    static function post($path, $point)
+    static function path($path)
     {
-        return self::set('POST', $path, $point);
-    }
-
-    // 设置多方法路由
-    static function match($methods, $path, $point)
-    {
-        return self::set($methods, $path, $point);
-    }
-
-    // 设置全方法路由
-    static function any($path, $point)
-    {
-        return self::set('ANY', $path, $point);
-    }
-
-    // 设置过渡
-    protected static function set($method, $path, $point)
-    {
-        $path = self::path($path);
-        $method = is_array($method) ? $method : [$method];
-        self::save($method, $path, $point);
-        return self::tap($method, $path);
-    }
-
-    // 规范路由定位
-    static function path($path, $self = false)
-    {
-        $path = '@' . str_replace(SP, '@', trim(ltrim(preg_replace('/\.html$/', '', $path), '/'), SP));
-        $self && self::$path = $path;
-//        var_dump($path === '@' ? '' : $path);
+        $path = '@' . str_replace(SP, '@', trim(ltrim($path, '/'), SP));
         return $path === '@' ? '' : $path;
     }
 
-    // 保存设置
-    protected static function save($method, $path, $point)
+    // ----------------------------------------------------------------------
+    //  定义路由：GET、POST、多方法、全方法
+    // ----------------------------------------------------------------------
+
+    static function get($path, $point)
     {
-        if (is_array($method)) {
-            foreach ($method as $m) {
-                self::save($m, $path, $point);
-            }
-        } else {
-            key_exists($method, self::$tap) || self::$tap[$method] = [];
-            self::$tap[$method][$path] = ['point' => $point];
+        return self::tap('GET', $path, $point);
+    }
+
+    static function post($path, $point)
+    {
+        return self::tap('POST', $path, $point);
+    }
+
+    static function match($methods, $path, $point)
+    {
+        return self::tap($methods, $path, $point);
+    }
+
+    static function any($path, $point)
+    {
+        return self::tap('ANY', $path, $point);
+    }
+
+    // ----------------------------------------------------------------------
+    //  路由设置
+    // ----------------------------------------------------------------------
+
+    static $taps = [];
+
+    private static function tap($method, $path, $point)
+    {
+        $path = self::path($path);
+        $method = is_array($method) ? $method : [$method];
+        foreach ($method as $k => $m) {
+            $method[$k] = $m = strtoupper($m);
+            key_exists($m, self::$taps) || self::$taps[$m] = [];
+            self::$taps[$m][$path] = ['point' => $point];
         }
+        return Tap::instance($method, $path);
     }
 
-    // 路由控制对象
-    protected static function tap()
-    {
-        return Controller::core('Tap', func_get_args());
-    }
+    // ----------------------------------------------------------------------
+    //  获取路由
+    // ----------------------------------------------------------------------
 
-    // 执行控制器方法
-    static function run($path)
-    {
-        $search = self::find($path);
-        is_null($search) && Exp::end('路由未定义或有误');
-        // 访问日志
-        Runtime::act();
-        $point = $search['point'];
-        if (is_string($point)) {
-            list($controller, $actionName) = self::action($point);
-            $rm = new \ReflectionMethod($controller, $actionName);
-            return $rm->invokeArgs($controller, self::actParams($rm->getParameters(), $search['args']));
-        } else {
-            return call_user_func_array($point, self::actParams((new \ReflectionFunction($point))->getParameters(), $search['args']));
-        }
-    }
-
-    // 获取路由
     static function find($path)
     {
         return self::search($path, Request::instance()->method()) ?: self::search($path);
     }
 
-    // 按方法搜索路由
+    // ----------------------------------------------------------------------
+    //  按方法搜索路由
+    // ----------------------------------------------------------------------
+
     static function search($path, $method = 'ANY')
     {
         $search = null;
-        if (key_exists($method, self::$tap)) {
-            foreach (self::$tap[$method] as $key => $route) {
+        // 检索方法
+        if (key_exists($method, self::$taps)) {
+            // 遍历所属方法路由
+            foreach (self::$taps[$method] as $key => $route) {
+                // 路由正则匹配结果(无路由正则false)
                 $match = key_exists('where', $route) ? preg_match($preg = '/^' . (key_exists('parse', $route) ? $route['preg'] : self::parse($method, $key)) . '$/', $path) : false;
+                // 检索路由和路由正则：路由正则匹配或路由相同
                 if ($match || $path === $key) {
                     $args = [];
+                    // 补充路由参数
                     if ($match) {
-                        preg_match_all($preg, $path, $m);
-                        for ($i = 1, $c = count($m); $i < $c; $i++) {
-                            $args[] = $m[$i][0] ? ltrim($m[$i][0], '@') : '{@}';
+                        preg_match_all($preg, $path, $matches);
+                        for ($i = 1, $c = count($matches); $i < $c; $i++) {
+                            // 剔除可选参数前@符号;无参则标记{@}
+                            $args[] = $matches[$i][0] ? ltrim($matches[$i][0], '@') : '{@}';
                         }
                     }
-                    if (!key_exists('input', $route) || $method !== 'POST' || self::input($route['input'])) {
-                        $search = ['point' => $route['point'], 'args' => $args];
+                    // POST参数验证过滤
+                    if (!$method === 'POST' || !key_exists('input', $route) || self::input($route['input'])) {
+                        $search = ['point' => $route['point'], 'args' => $args, 'path' => $key];
                         is_null(self::$define) && self::$define = str_replace('/', '@', str_replace(SP, '@', str_replace('?', '#', $key)));
                         break;
                     }
                 }
             }
-            reset(self::$tap[$method]);
+            reset(self::$taps[$method]);
         }
         return $search;
     }
 
-    // 解析路由正则
+    // ----------------------------------------------------------------------
+    //  解析路由正则
+    // ----------------------------------------------------------------------
+
     protected static function parse($method, $path)
     {
+        // 当分隔符不为斜杠时转义
         $p = str_replace('/', '\\/', $path);
-        foreach (self::$tap[$method][$path]['where'] as $name => $preg) {
+        foreach (self::$taps[$method][$path]['where'] as $name => $preg) {
+            // 替换路由参数：不可选及可选
             $p = str_replace(['{' . $name . '}', '@{' . $name . '?}'], ['(' . $preg . ')', '(@' . $preg . ')?'], $p);
         }
-        self::$tap[$method][$path]['parse'] = true;
-        return self::$tap[$method][$path]['preg'] = $p;
+        // 记录解析状态
+        self::$taps[$method][$path]['parse'] = true;
+        // 更新正则并返回
+        return self::$taps[$method][$path]['preg'] = $p;
     }
 
-    // POST数据验证
+    // ----------------------------------------------------------------------
+    //  POST数据验证
+    // ----------------------------------------------------------------------
+
     static function input($input)
     {
         $res = true;
         foreach ($input as $name => $preg) {
-            if (!key_exists($name, $_POST) || !preg_match('/^' . $preg . '$/', $_POST[$name])) {
-                $res = false;
-                break;
-            }
+            if (key_exists($name, $_POST) && preg_match('/^' . $preg . '$/', $_POST[$name])) continue;
+            $res = false;
+            break;
         }
         return $res;
-    }
-
-    // 解析控制器方法
-    protected static function action($point)
-    {
-        preg_match_all('/^(\w+\/)?(\w+)@(\w+)$/', $point, $match);
-        empty($match[0]) && Exp::end('路由指向异常');
-        Request::$module = substr($match[1][0], 0, -1);
-        Request::$controller = $match[2][0];
-        Request::$action = $match[3][0];
-        // 加载控制器
-        $c = Controller::action(Request::$controller, Request::$module);
-        method_exists($c, Request::$action) || Exp::end('控制器' . Request::$module . Request::$controller . '找不到方法' . Request::$action);
-        return [$c, Request::$action];
-    }
-
-    // 解析路由指向方法参数
-    protected static function actParams($params, $args)
-    {
-        count($params) === count($args) || Exp::end('路由指向方法参数数量有误');
-        foreach ($args as $k => $v) {
-            $v === '{@}' && ($params[$k]->isDefaultValueAvailable() ? $args[$k] = $params[$k]->getDefaultValue() : Exp::end('路由指向方法参数' . $params[$k]->name . '无值'));
-        }
-        return $args;
     }
 
 }
