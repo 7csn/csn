@@ -12,9 +12,9 @@ final class Route extends Instance
     function construct()
     {
         // 加载路由文件
-        self::loadFile();
+        $this->loadFile();
         // 响应路由
-        Response::route(self::find(Request::instance()->path()));
+        Response::route(self::find(self::path(Request::instance()->path())));
         // 单例
         return self::single();
     }
@@ -23,7 +23,7 @@ final class Route extends Instance
     //  加载路由文件
     // ----------------------------------------------------------------------
 
-    static function loadFile()
+    private function loadFile()
     {
         File::copy(CSN_X . 'route.php', APP . 'route.php');
         Csn::need(APP . 'route.php');

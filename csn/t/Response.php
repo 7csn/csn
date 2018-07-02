@@ -33,15 +33,18 @@ final class Response extends Instance
     function export()
     {
         is_null($route = self::$route) && Exp::end('路由未定义或有误');
+        if (key_exists('export', self::$route)) return;
+        self::$route['export'] = true;
         // 访问日志
 //        Runtime::action();
         if (is_string($point = $route['point'])) {
             list($controller, $actionName) = $this->action($point);
             $rm = new \ReflectionMethod($controller, $actionName);
-            return $rm->invokeArgs($controller, $this->actionParams($rm->getParameters(), $route['args']));
+            $run =  $rm->invokeArgs($controller, $this->actionParams($rm->getParameters(), $route['args']));
         } else {
-            return call_user_func_array($point, $this->actionParams((new \ReflectionFunction($point))->getParameters(), $route['args']));
+            $run =  call_user_func_array($point, $this->actionParams((new \ReflectionFunction($point))->getParameters(), $route['args']));
         }
+        exit($run);
     }
 
     // ----------------------------------------------------------------------
