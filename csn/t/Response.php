@@ -32,15 +32,15 @@ final class Response extends Instance
 
     function export()
     {
-        is_null(self::$route) && Exp::end('路由未定义或有误');
+        is_null($route = self::$route) && Exp::end('路由未定义或有误');
         // 访问日志
 //        Runtime::action();
-        if (is_string($point = self::$route['point'])) {
-            list($controller, $actionName) = self::action($point);
+        if (is_string($point = $route['point'])) {
+            list($controller, $actionName) = $this->action($point);
             $rm = new \ReflectionMethod($controller, $actionName);
-            return $rm->invokeArgs($controller, self::actionParams($rm->getParameters(), $search['args']));
+            return $rm->invokeArgs($controller, $this->actionParams($rm->getParameters(), $route['args']));
         } else {
-            return call_user_func_array($point, self::actionParams((new \ReflectionFunction($point))->getParameters(), $search['args']));
+            return call_user_func_array($point, $this->actionParams((new \ReflectionFunction($point))->getParameters(), $route['args']));
         }
     }
 
@@ -48,7 +48,7 @@ final class Response extends Instance
     //  解析控制器方法
     // ----------------------------------------------------------------------
 
-    protected static function action($point)
+    private function action($point)
     {
         preg_match_all('/^(((\w+\/)*)(\w+))@(\w+)$/', $point, $match);
         empty($match[0]) && Exp::end('路由指向异常');
@@ -64,7 +64,7 @@ final class Response extends Instance
     //  解析路由指向方法参数
     // ----------------------------------------------------------------------
 
-    protected static function actionParams($params, $args)
+    private function actionParams($params, $args)
     {
         count($params) === count($args) || Exp::end('路由指向方法参数数量有误');
         foreach ($args as $k => $v) {
