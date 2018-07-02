@@ -35,7 +35,7 @@ final class Response extends Instance
         is_null(self::$route) && Exp::end('路由未定义或有误');
         // 访问日志
 //        Runtime::action();
-        if (is_string($point = $search['point'])) {
+        if (is_string($point = self::$route['point'])) {
             list($controller, $actionName) = self::action($point);
             $rm = new \ReflectionMethod($controller, $actionName);
             return $rm->invokeArgs($controller, self::actionParams($rm->getParameters(), $search['args']));
