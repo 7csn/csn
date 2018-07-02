@@ -117,7 +117,6 @@ final class Route extends Instance
                     // POST参数验证过滤
                     if (!$method === 'POST' || !key_exists('input', $route) || self::input($route['input'])) {
                         $search = ['point' => $route['point'], 'args' => $args, 'path' => $key];
-                        is_null(self::$define) && self::$define = str_replace('/', '@', str_replace(SP, '@', str_replace('?', '#', $key)));
                         break;
                     }
                 }
