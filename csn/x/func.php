@@ -8,18 +8,6 @@ function system($name, $func = null, $args = []) {
     return key_exists($name, $system) ? $system[$name] : $system[$name] = call_user_func_array($func, $args);
 }
 
-// 导入视图
-function view()
-{
-    return \csn\Controller::core('View', func_get_args());
-}
-
-// 获取静态页
-function cache()
-{
-    return call_user_func_array('\csn\View::getCache', func_get_args());
-}
-
 // 模板引入方法
 function viewInclude($path, $data, $time)
 {

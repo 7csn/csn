@@ -22,7 +22,7 @@ final class Request extends Instance
         $uri = preg_replace('/\.html$/', '', preg_replace("/^(\/[^\?&#]+)?.*?$/", '\1', $this->uri));
         $len = strlen($scriptName);
         $start = substr($uri, 0, $len) === $scriptName ? $len : $index + 1;
-        $this->path = substr($uri, $start);
+        $this->path = substr($uri, $start) ?: '/';
         $this->protocol = empty($_SERVER['HTTPS']) || $_SERVER['HTTPS'] === 'off' ? 'http' : 'https';
         $this->host = isset($_SERVER['HTTP_HOST']) ? $_SERVER['HTTP_HOST'] : '';
         $this->url = $this->protocol . '://' . $this->host . $this->uri;
