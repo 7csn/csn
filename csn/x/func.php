@@ -1,10 +1,11 @@
 <?php
 
 namespace app\c;
+
 // 缓存
-function system($name, $func = null) {
+function system($name, $func = null, $args = []) {
     static $system = [];
-    return key_exists($name, $system) ? $system[$name] : $system[$name] = call_user_func_array($func, (new \ReflectionFunction($func))->getParameters());
+    return key_exists($name, $system) ? $system[$name] : $system[$name] = call_user_func_array($func, $args);
 }
 
 // 导入视图

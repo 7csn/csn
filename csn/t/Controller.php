@@ -6,7 +6,7 @@ class Controller
 {
 
     // ----------------------------------------------------------------------
-    //  获取模型(框架核心、框架外调、项目)
+    //  获取模型(框架核心、框架外调、项目)对象
     // ----------------------------------------------------------------------
 
     final static function core($name, $args = [])
@@ -19,9 +19,18 @@ class Controller
         return Instance::create('csn\y\\', $name, $args);
     }
 
-    final static function app($name, $args = [])
+    final protected function model($name, $args = [])
     {
         return Instance::create('app\m\\', $name, $args);
+    }
+
+    // ----------------------------------------------------------------------
+    //  视图对象
+    // ----------------------------------------------------------------------
+
+    final protected function view()
+    {
+        return Instance::create('csn\\', 'View', func_get_args());
     }
 
     // ----------------------------------------------------------------------

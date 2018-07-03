@@ -2,40 +2,48 @@
 
 namespace csn;
 
-class View
+final class View extends Instance
 {
 
-    protected $useView;                 // 当前视图文件
-    protected $sectionSave = [];       // 父模板块数组
-    protected $sectionChange = [];     // 子模板块数组
-    protected $content = '';           // 当前静态内容
-    protected static $cacheTime;        // 默认缓存时间
-    protected static $viewDir;          // 视图存放目录
-    protected static $templateDir = []; // 编译静态目录
+    // ----------------------------------------------------------------------
+    //  视图对象
+    // ----------------------------------------------------------------------
 
-    // 对外显示静态内容
-    function __toString()
+    function construct($names, $data = [], $time = null)
     {
-        return $this->content;
+        $path = $this->path($names);
+        is_null($time) && $time = self::cacheTime();
+        $this->useView = self::compileOk($path, $names) ?: $this->compile($path);
+        $this->content = self::content($this->useView, $data, $path, $time);
     }
 
+    // ----------------------------------------------------------------------
+    //  框架初始化
+    // ----------------------------------------------------------------------
+
     // 获取缓存
-    static function getCache($names, $time = null)
+    function getCache($names, $time = null)
     {
-        $path = self::path($names);
+        $path = $this->path($names);
         is_null($time) && $time = self::cacheTime();
         $html = self::html($path);
         return is_file($html) && filemtime($html) + $time >= CSN_TIME && ($outfile = self::compileOk($path, $names)) && filemtime($html) >= filemtime($outfile) ? $html : false;
     }
 
-    // 视图对象
-    function __construct($names, $data = [], $time = null)
+    // ----------------------------------------------------------------------
+    //  默认缓存时间
+    // ----------------------------------------------------------------------
+
+    private static $cacheTime;
+
+    private static function cacheTime()
     {
-        $path = self::path($names);
-        is_null($time) && $time = self::cacheTime();
-        $this->useView = self::compileOk($path, $names) ?: $this->compile($path);
-        $this->content = self::content($this->useView, $data, $path, $time);
+        return is_null(self::$cacheTime) ? self::$cacheTime = Conf::web('view_cache') : self::$cacheTime;
     }
+
+    // ----------------------------------------------------------------------
+    //  框架初始化
+    // ----------------------------------------------------------------------
 
     // 转换路由
     protected static function path($path)
@@ -43,17 +51,50 @@ class View
         return str_replace('.', DS, str_replace('/', DS, $path));
     }
 
+    // ----------------------------------------------------------------------
+    //  框架初始化
+    // ----------------------------------------------------------------------
+
+    protected $useView;                 // 当前视图文件
+
+    // ----------------------------------------------------------------------
+    //  框架初始化
+    // ----------------------------------------------------------------------
+    protected $sectionSave = [];       // 父模板块数组
+
+    // ----------------------------------------------------------------------
+    //  框架初始化
+    // ----------------------------------------------------------------------
+    protected $sectionChange = [];     // 子模板块数组
+
+    // ----------------------------------------------------------------------
+    //  框架初始化
+    // ----------------------------------------------------------------------
+    protected $content = '';           // 当前静态内容
+
+    // ----------------------------------------------------------------------
+    //  框架初始化
+    // ----------------------------------------------------------------------
+
+    // 对外显示静态内容
+    function __toString()
+    {
+        return $this->content;
+    }
+
+    // ----------------------------------------------------------------------
+    //  框架初始化
+    // ----------------------------------------------------------------------
+
     // 获取使用视图
     function getView()
     {
         return $this->useView;
     }
 
-    // 获取默认缓存时间
-    protected static function cacheTime()
-    {
-        return is_null(self::$cacheTime) ? self::$cacheTime = Conf::web('view_cache') : self::$cacheTime;
-    }
+    // ----------------------------------------------------------------------
+    //  框架初始化
+    // ----------------------------------------------------------------------
 
     // 获取静态内容
     protected static function content($source, $data, $path, $time)
@@ -67,11 +108,19 @@ class View
         return $content;
     }
 
+    // ----------------------------------------------------------------------
+    //  框架初始化
+    // ----------------------------------------------------------------------
+
     // 编译文件是否有效
     protected static function compileOk($path, $names)
     {
         return is_file($source = self::source($path)) ? (is_file($outfile = self::output($path)) && filemtime($outfile) >= filemtime($source)) ? $outfile : false : (is_file($outfile = self::source($path, false)) ? $outfile : Exp::end('找不到视图' . $names));
     }
+
+    // ----------------------------------------------------------------------
+    //  框架初始化
+    // ----------------------------------------------------------------------
 
     // 解析模板
     protected function compile($path)
@@ -79,6 +128,10 @@ class View
         File::write($outfile = self::output($path), $this->compileGo(self::source($path)), true);
         return $outfile;
     }
+
+    // ----------------------------------------------------------------------
+    //  框架初始化
+    // ----------------------------------------------------------------------
 
     // 编译模板
     protected function compileGo($path)
@@ -101,6 +154,10 @@ class View
         return $content;
     }
 
+    // ----------------------------------------------------------------------
+    //  框架初始化
+    // ----------------------------------------------------------------------
+
     // 继承模板
     protected function compileExtends(&$content)
     {
@@ -111,7 +168,7 @@ class View
     protected function _compileExtends($match)
     {
         $names = $match[2];
-        $path = self::path($names);
+        $path = $this->path($names);
         $source = self::source($path, true);
         is_file($source) || Exp::end('找不到视图模板' . $path);
         $parent = file_get_contents($source);
@@ -156,6 +213,10 @@ class View
             $content = str_replace('@save{' . $k . '}', $replace, $content);
         }
     }
+
+    // ----------------------------------------------------------------------
+    //  框架初始化
+    // ----------------------------------------------------------------------
 
     // 自然模板
     protected static function compileAuto(&$content)
@@ -230,6 +291,10 @@ class View
         $content = preg_replace('/@forelse\s*\(((.+?) as .+?)\)(.*?)@empty(.*?)@endforelse/us', '<?php if (empty(\2)) { ?>\4<?php } else { foreach (\1) { ?>\3<?php } } ?>', $content);
     }
 
+    // ----------------------------------------------------------------------
+    //  框架初始化
+    // ----------------------------------------------------------------------
+
     // include模板
     protected static function compileInclude(&$content)
     {
@@ -242,11 +307,19 @@ class View
         return '<?php viewInclude("' . $match[2] . '", ' . (empty($match[5]) ? '[]' : '["' . $match[5] . '"=>$' . $match[5] . ']') . ', ' . (empty($match[8]) ? 'null' : (int)$match[8]) . ');?>';
     }
 
+    // ----------------------------------------------------------------------
+    //  框架初始化
+    // ----------------------------------------------------------------------
+
     // 模板源文件
     protected static function source($path, $tpl = true)
     {
         return self::viewDir() . $path . ($tpl ? '.tpl' : '.php');
     }
+
+    // ----------------------------------------------------------------------
+    //  框架初始化
+    // ----------------------------------------------------------------------
 
     // 编译文件
     protected static function output($path)
@@ -254,22 +327,14 @@ class View
         return self::templateDir('php') . $path . '.php';
     }
 
+    // ----------------------------------------------------------------------
+    //  框架初始化
+    // ----------------------------------------------------------------------
+
     // 静态页文件
     protected static function html($path)
     {
         return self::templateDir('html') . md5(Request::path() . Safe::get('key') . $path) . '.html';
-    }
-
-    // 视图目录
-    protected static function viewDir()
-    {
-        return is_null(self::$viewDir) ? self::$viewDir = APP_VIEW : self::$viewDir;
-    }
-
-    // 编译静态目录
-    protected static function templateDir($which)
-    {
-        return key_exists($which, self::$templateDir) ? self::$templateDir[$which] : self::$templateDir[$which] = RUN_T . $which . DS;
     }
 
 }

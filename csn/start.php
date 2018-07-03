@@ -52,12 +52,16 @@ define('APP_CONTROLLER', APP . 'controllers' . DS);
 define('APP_CONFIG', APP . 'configs' . DS);
 
 // ----------------------------------------------------------------------
-//  项目运行目录：根目录、会话、编译模板
+//  项目运行目录：根目录、会话、访问、异常、SQL、编译PHP、编译HTML
 // ----------------------------------------------------------------------
 
 define('RUN', WEB . 'runtime' . DS);
-define('RUN_S', RUN . 'session' . DS);
-define('RUN_T', RUN . 'template' . DS);
+define('RUN_SESSION', RUN . 'session' . DS);
+define('RUN_ACTION', RUN . 'action' . DS);
+define('RUN_ERROR', RUN . 'error' . DS);
+define('RUN_SQL', RUN . 'sql' . DS);
+define('RUN_PHP', RUN . 'php' . DS);
+define('RUN_HTML', RUN . 'html' . DS);
 
 // ----------------------------------------------------------------------
 //  引入框架核心类文件
