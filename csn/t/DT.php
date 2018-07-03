@@ -2,7 +2,7 @@
 
 namespace csn;
 
-class DT extends Node implements Idbable
+class DT extends Node
 {
 
 }

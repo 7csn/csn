@@ -43,11 +43,23 @@ class Controller
     final static function controller($controller, $module = '')
     {
         $name = ($module ? str_replace('/', DS, $module) . DS : '') . $controller;
-        key_exists($controller, self::$controllers) && self::$controllers[$controller]['name'] === $name && Exp::end('禁止跨模块引入同名控制器');
+        if (key_exists($controller, self::$controllers)) {
+            self::$controllers[$controller]['name'] === $name || Exp::end('禁止跨模块引入同名控制器');
+            return self::$controllers[$controller]['obj'];
+        }
         is_file($file = APP_CONTROLLER . $name . '.php') ? Csn::need($file) : Exp::end('控制器' . $name . '不存在');
         $class = '\app\c\\' . $controller;
         self::$controllers[$controller] = ['name' => $name, 'obj' => new $class()];
         return self::$controllers[$controller]['obj'];
+    }
+
+    // ----------------------------------------------------------------------
+    //  获取项目控制器方法
+    // ----------------------------------------------------------------------
+
+    final static function action($action, $args = [])
+    {
+        return Response::instance()->action($action, $args);
     }
 
     // ----------------------------------------------------------------------

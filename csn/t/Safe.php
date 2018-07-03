@@ -17,7 +17,7 @@ final class Safe
     {
         if (is_null(self::$secret)) {
             $file = APP . 'secret.ini';
-            is_file($file) && Exp::end('未检测到密钥文件，请先创建');
+            is_file($file) || Exp::end('未检测到密钥文件，请先创建');
             self::$secret = parse_ini_file($file);
         }
         return is_null($name) ? self::$secret : self::$secret[$name];

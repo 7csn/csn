@@ -55,7 +55,7 @@ class Model extends Data
     // 数据库连接
     protected static function connect($address)
     {
-        return key_exists($address, DbInfo::$links) ? DbInfo::$links[$address] : DbInfo::$links[$address] = (function () use ($address) {
+        return key_exists($address, DbInfo::$links) ? DbInfo::$links[$address] : DbInfo::$links[$address] = call_user_func(function($address) {
             list($host, $port) = explode(':', $address);
             try {
                 $node = self::node($address);
@@ -65,7 +65,7 @@ class Model extends Data
                 Exp::end('[PDO]：' . str_replace("\n", '', iconv("GB2312// IGNORE", "UTF-8", $e->getMessage())));
             }
             return $link;
-        })();
+        }, $address);
     }
 
     // ----------------------------------------------------------------------
@@ -141,24 +141,22 @@ class Model extends Data
     // 获取数据库列表
     protected static function dbns($link, $address)
     {
-        return key_exists($address, DbInfo::$dbns) ? DbInfo::$dbns[$address] : DbInfo::$dbns[$address] = (function () use ($link) {
+        return key_exists($address, DbInfo::$dbns) ? DbInfo::$dbns[$address] : DbInfo::$dbns[$address] = call_user_func(function($link) {
             $sth = $link->query(" SHOW DATABASES ");
             $dbns = [];
             foreach (self::res($sth) as $v) {
                 $dbns[] = $v->Database;
             }
             return $dbns;
-        })();
+        }, $link);
     }
 
     // 库名及表名初始化
     protected static function names()
     {
-        $class = static::class;
-        $class::$tbn || (function ($class) {
-            if (strpos($class, 'app\\m\\') !== 0) {
-                Exp::end('数据库模型' . $class . '异常');
-            } else {
+        $class = get_called_class();
+        $class::$tbn || call_user_func(function($class) {
+            if (strpos($class, 'app\\m\\') === 0) {
                 $arr = array_reverse(explode('\\', substr($class, 6)));
                 $count = count($arr);
                 if ($count === 0) {
@@ -167,21 +165,25 @@ class Model extends Data
                     $class::$tbn = strtolower($arr[0]);
                     $class::$dbn = key_exists(1, $arr) ? strtolower($arr[1]) : false;
                 }
+            } else {
+                Exp::end('数据库模型' . $class . '异常');
             }
-        })($class);
+        }, $class);
         return $class;
     }
 
     // 获取表名
     protected static function tbn()
     {
-        return self::names()::$tbn;
+        $class = self::names();
+        return $class::$tbn;
     }
 
     // 获取/设置库名
     static function dbn($dbn = null)
     {
-        return is_null($dbn) ? self::names()::$dbn : self::names()::$dbn = $dbn;
+        $class = self::names();
+        return is_null($dbn) ? $class::$dbn : $class::$dbn = $dbn;
     }
 
     // 查询表结构;参数为关联表名
@@ -189,7 +191,7 @@ class Model extends Data
     {
         is_null($tbn) && $tbn = self::tbn();
         $key = self::dbn() . '@' . $tbn;
-        return key_exists($key, DbInfo::$descs) ? DbInfo::$descs[$key] : DbInfo::$descs[$key] = (function ($tbn) {
+        return key_exists($key, DbInfo::$descs) ? DbInfo::$descs[$key] : DbInfo::$descs[$key] = call_user_func(function($tbn) {
             $desc = new \stdClass();
             $desc->list = new \stdClass();
             $desc->primaryKey = null;
@@ -197,13 +199,13 @@ class Model extends Data
                 return " DESC `$tbn` ";
             }, false, $tbn) as $v) {
                 $v->Key === 'PRI' && $desc->primaryKey = $v->Field;
-                $desc->list->{$v->Field} = (function ($row) {
+                $desc->list->{$v->Field} = call_user_func(function($row) {
                     unset($row->Field);
                     return $row;
-                })($v);
+                }, $v);
             }
             return $desc;
-        })($tbn);
+        }, $tbn);
     }
 
     // 查询字段结构
@@ -226,7 +228,7 @@ class Model extends Data
                 is_null($val) ? '' : (string)$val;
                 break;
             case 'int':
-                is_null($val) ? 0 : floatval(intval);
+                is_null($val) ? 0 : floatval($val);
                 break;
             default:
                 is_null($val) ? 0 : floatval($val);
@@ -373,9 +375,9 @@ class Model extends Data
     // 预编译
     function bind($bind)
     {
-        empty($bind) || (function ($obj, $bind) {
+        empty($bind) || call_user_func(function($obj, $bind) {
             $obj->parse->bind = is_null($b = $obj->parse->bind) ? $bind : array_merge($b, $bind);
-        })($this, $bind);
+        }, $this, $bind);
         return $this;
     }
 

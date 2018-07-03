@@ -39,14 +39,8 @@ final class Response extends Instance
             $this->export = true;
             // 访问日志
 //            Runtime::action();
-            if (is_string($point = $route['point'])) {
-                list($controller, $actionName) = $this->action($point);
-                $rm = new \ReflectionMethod($controller, $actionName);
-                $run = $rm->invokeArgs($controller, $this->actionParams($rm->getParameters(), $route['args']));
-            } else {
-                $run = call_user_func_array($point, $this->actionParams((new \ReflectionFunction($point))->getParameters(), $route['args']));
-            }
-            exit($run);
+            $run = is_string($point = $route['point']) ? $this->action($point, $route['args']) : call_user_func_array($point, self::actionParams((new \ReflectionFunction($point))->getParameters(), $route['args']));
+            exit(is_string($run) ? $run : json_encode($run));
         }
     }
 
@@ -54,16 +48,17 @@ final class Response extends Instance
     //  解析控制器方法
     // ----------------------------------------------------------------------
 
-    private function action($point)
+    function action($point, $args)
     {
         preg_match_all('/^(((\w+\/)*)(\w+))@(\w+)$/', $point, $match);
-        empty($match[0]) && Exp::end('路由指向异常');
+        empty($match[0]) && Exp::end("路由 $point 指向异常");
         $module = substr($match[2][0], 0, -1);
         $action = $match[5][0];
         // 加载控制器
         $controller = Controller::controller($match[4][0], $module);
         method_exists($controller, $action) || Exp::end('控制器文件' . $match[1][0] . '.php找不到方法' . $action);
-        return [$controller, $action];
+        $rm = new \ReflectionMethod($controller, $action);
+        return $rm->invokeArgs($controller, $this->actionParams($rm->getParameters(), $args));
     }
 
     // ----------------------------------------------------------------------
@@ -72,9 +67,16 @@ final class Response extends Instance
 
     private function actionParams($params, $args)
     {
-        count($params) === count($args) || Exp::end('路由指向方法参数数量有误');
-        foreach ($args as $k => $v) {
-            $v === '{@}' && ($params[$k]->isDefaultValueAvailable() ? $args[$k] = $params[$k]->getDefaultValue() : Exp::end('路由指向方法参数' . $params[$k]->name . '无值'));
+        $paramsCount = count($params);
+        $num = $paramsCount - count($args);
+        if ($num !== 0 && $num !== 1) Exp::end('路由指向方法参数数量有误');
+        if ($num === 1) {
+            is_null($class = $params[0]->getClass()) && Exp::end('路由指向方法首参需为对象');
+            $class->name === 'csn\Request' || Exp::end('路由指向方法首参需为Request对象');
+            array_unshift($args, Request::instance());
+        }
+        for ($i = $num; $i < $paramsCount; $i++) {
+            $args[$i] === '{@}' && ($params[$i]->isDefaultValueAvailable() ? $args[$i] = $params[$i]->getDefaultValue() : Exp::end('路由指向方法参数' . $params[$i]->name . '无值'));
         }
         return $args;
     }
