@@ -46,7 +46,7 @@ final class View extends Instance
 
     private function view()
     {
-        return ksy_exists($this->path, self::$views) ? self::$views[$this->path] : self::$views[$this->path] = APP_VIEW . $this->path . '.php';
+        return key_exists($this->path, self::$views) ? self::$views[$this->path] : self::$views[$this->path] = APP_VIEW . $this->path . '.php';
     }
 
     // ----------------------------------------------------------------------
@@ -57,7 +57,7 @@ final class View extends Instance
 
     private function php()
     {
-        return ksy_exists($this->path, self::$phps) ? self::$phps[$this->path] : self::$phps[$this->path] = RUN_PHP . $this->path . '.php';
+        return key_exists($this->path, self::$phps) ? self::$phps[$this->path] : self::$phps[$this->path] = RUN_PHP . $this->path . '.php';
     }
 
     // ----------------------------------------------------------------------
@@ -90,7 +90,7 @@ final class View extends Instance
 
     function getCache($time = null)
     {
-        return is_file($this->html) && filemtime($this->html) + (is_null($time) ? Conf::web('view_cache') : $time) >= CSN_TIME ? $this->html : false;
+        return is_file($this->html) && filemtime($this->html) + (is_null($time) ? Conf::web('view_cache') : $time) >= CSN_TIME ? Csn::need($this->html) : false;
     }
 
     // ----------------------------------------------------------------------

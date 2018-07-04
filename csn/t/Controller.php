@@ -86,9 +86,9 @@ class Controller
     //  创建视图
     // ----------------------------------------------------------------------
 
-    final protected function view($names, $args = [], $time = null)
+    final protected function view($names, $data = [], $time = null)
     {
-        return View::instance($names)->makeHtml($args, $time);
+        return View::instance($names)->makeHtml($data, $time);
     }
 
     // ----------------------------------------------------------------------

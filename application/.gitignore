@@ -1,2 +1,6 @@
 *
+!configs
+!controllers
+!models
+!views
 !.gitignore
