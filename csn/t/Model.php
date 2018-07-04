@@ -156,7 +156,7 @@ class Model extends Data
     {
         $class = get_called_class();
         $class::$tbn || call_user_func(function($class) {
-            if (strpos($class, 'app\\m\\') === 0) {
+            if ($class === 'csn\Model' || strpos($class, 'app\\m\\') === 0) {
                 $arr = array_reverse(explode('\\', substr($class, 6)));
                 $count = count($arr);
                 if ($count === 0) {

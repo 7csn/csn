@@ -235,26 +235,7 @@ final class Safe
     }
 
     // ----------------------------------------------------------------------
-    //  生成登录ID
-    // ----------------------------------------------------------------------
-
-    static function eLoginId($str)
-    {
-        return self::encode(CSN_TIME . '.' . chr(mt_rand(97, 122)) . '.' . $str);
-    }
-
-    // ----------------------------------------------------------------------
-    //  登录ID解码
-    // ----------------------------------------------------------------------
-
-    static function dLoginId($loginId, $time = 7200)
-    {
-        $arr = explode('.', self::decode($loginId));
-        return count($arr) === 3 && is_numeric($t = $arr[0]) ? ($t <= CSN_TIME && $t + $time > CSN_TIME) ? $arr[2] : 0 : false;
-    }
-
-    // ----------------------------------------------------------------------
-    //  添加转义字符
+    //  转义('、"、\、NULL)：增、减
     // ----------------------------------------------------------------------
 
     static function addSlashes($data)
@@ -269,10 +250,6 @@ final class Safe
         return $data;
     }
 
-    // ----------------------------------------------------------------------
-    //  去除转义字符
-    // ----------------------------------------------------------------------
-
     static function stripSlashes($data)
     {
         if (is_array($data)) {
@@ -281,6 +258,34 @@ final class Safe
             }
         } else {
             $data = stripSlashes(trim($data));
+        }
+        return $data;
+    }
+
+    // ----------------------------------------------------------------------
+    //  HTML实体转换：&(&amp;)、"(&quot;)、'(&#039;|&apos;)、<(&lt;)、>(&gt;)
+    // ----------------------------------------------------------------------
+
+    static function htmlspecialchars($data)
+    {
+        if (is_array($data)) {
+            foreach ($data as $k => $v) {
+                $data[$k] = self::htmlspecialchars($v);
+            }
+        } else {
+            $data = htmlspecialchars($data);
+        }
+        return $data;
+    }
+
+    static function htmlspecialchars_decode($data)
+    {
+        if (is_array($data)) {
+            foreach ($data as $k => $v) {
+                $data[$k] = self::htmlspecialchars_decode($v);
+            }
+        } else {
+            $data = htmlspecialchars_decode($data);
         }
         return $data;
     }

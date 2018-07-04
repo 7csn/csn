@@ -14,7 +14,10 @@ final class View extends Instance
         $this->path = $this->path($names);
         $this->html = RUN_HTML . $this->path . DS . Safe::en(Request::instance()->path()) . '.html';
         is_file($this->view()) || Exp::end('找不到视图：' . $names);
-        is_file($this->php()) && filemtime($this->php()) >= filemtime($this->view()) || File::write($this->php(), $this->compileGo(), true);
+        if (!is_file($this->php()) || filemtime($this->php()) < filemtime($this->view())) {
+            File::write($this->php(), $this->compileGo(), true);
+            File::rmDir(RUN_HTML . $this->path, true);
+        }
     }
 
     // ----------------------------------------------------------------------
@@ -61,6 +64,32 @@ final class View extends Instance
     }
 
     // ----------------------------------------------------------------------
+    //  静态缓存是否有效
+    // ----------------------------------------------------------------------
+
+    private function htmlOK($time = null)
+    {
+        return is_file($this->html) && filemtime($this->html) + (is_null($time) ? Conf::web('view_cache') : $time) > CSN_START;
+    }
+
+    // ----------------------------------------------------------------------
+    //  获取静态内容
+    // ----------------------------------------------------------------------
+
+    function makeHtml($func, $args, $time)
+    {
+        return $this->htmlOK($time) ? file_get_contents($this->html) : call_user_func(function ($data) {
+            ob_start();
+            extract($data);
+            include $this->php();
+            $content = ob_get_contents();
+            ob_end_clean();
+            File::write($this->html, $content, true);
+            return $content;
+        }, call_user_func_array($func, $args));
+    }
+
+    // ----------------------------------------------------------------------
     //  编译模板
     // ----------------------------------------------------------------------
 
@@ -81,31 +110,6 @@ final class View extends Instance
         self::compileForeach($content);
         self::compileForelse($content);
         self::compileInclude($content);
-        return $content;
-    }
-
-    // ----------------------------------------------------------------------
-    //  获取有效缓存：静态页地址或false
-    // ----------------------------------------------------------------------
-
-    function getCache($time = null)
-    {
-        return is_file($this->html) && filemtime($this->html) + (is_null($time) ? Conf::web('view_cache') : $time) >= CSN_TIME ? Csn::need($this->html) : false;
-    }
-
-    // ----------------------------------------------------------------------
-    //  获取静态内容
-    // ----------------------------------------------------------------------
-
-    function makeHtml($data, $time)
-    {
-        ob_start();
-        extract($data);
-        include $this->php();
-        $content = ob_get_contents();
-        ob_end_clean();
-        is_null($time) && $time = Conf::web('view_cache');
-        $time && (!is_file($this->html) || filemtime($this->html) + $time < CSN_TIME) && File::write($this->html, $content, true);
         return $content;
     }
 
@@ -200,13 +204,14 @@ final class View extends Instance
     // 数组模板
     protected static function compileArr(&$content)
     {
-        $content = preg_replace_callback('/{\$([^$}]+)}/', 'self::_compileArr', $content);
-    }
-
-    // 不解析模板
-    protected static function compileSelf(&$content)
-    {
-        $content = preg_replace('/@({{.*?}})/', '\1', $content);
+        $content = preg_replace_callback('/{\$([^$}]+)}/', function ($match) {
+            $arr = explode('.', $match[1]);
+            $str = '$' . $arr[0];
+            for ($i = 1, $c = count($arr); $i < $c; $i++) {
+                $str .= "['{$arr[$i]}']";
+            }
+            return '<?php echo ' . $str . '; ?>';
+        }, $content);
     }
 
     // 编译数组元素模板
@@ -218,6 +223,12 @@ final class View extends Instance
             $str .= "['{$arr[$i]}']";
         }
         return '<?php echo ' . $str . '; ?>';
+    }
+
+    // 不解析模板
+    protected static function compileSelf(&$content)
+    {
+        $content = preg_replace('/@({{.*?}})/', '\1', $content);
     }
 
     // if模板

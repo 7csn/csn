@@ -72,16 +72,4 @@ final class Tap extends Instance
         return $this;
     }
 
-    // ----------------------------------------------------------------------
-    //  静态页缓存时效：默认配置web.view_cache
-    // ----------------------------------------------------------------------
-
-    protected $cache;
-
-    function cache($time = 0)
-    {
-        $this->cache = $time;
-        return $this;
-    }
-
 }

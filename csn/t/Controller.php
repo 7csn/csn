@@ -86,18 +86,9 @@ class Controller
     //  创建视图
     // ----------------------------------------------------------------------
 
-    final protected function view($names, $data = [], $time = null)
+    final protected function view($names, $func, $args = [], $cacheTime = null)
     {
-        return View::instance($names)->makeHtml($data, $time);
-    }
-
-    // ----------------------------------------------------------------------
-    //  视图有效缓存：静态页地址或false
-    // ----------------------------------------------------------------------
-
-    final protected function cache($names, $time = null)
-    {
-        return View::instance($names)->getCache($time);
+        return View::instance($names)->makeHtml($func, $args, $cacheTime);
     }
 
     // ----------------------------------------------------------------------
