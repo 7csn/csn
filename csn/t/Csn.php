@@ -94,4 +94,38 @@ final class Csn
         return key_exists($file, self::$needs) ? self::$needs[$file] : self::$needs[$file] = is_file($file) ? include $file : null;
     }
 
+    // ----------------------------------------------------------------------
+    //  自定义错误、异常
+    // ----------------------------------------------------------------------
+
+    // 错误数组
+    protected static $error = [];
+
+    // 错误(非致命)处理
+    static function error($code, $msg, $file, $line)
+    {
+        self::$error[] = [$code, $msg, $file, $line];
+        DbInfo::getTransaction() || self::end();
+    }
+
+    // 异常处理
+    static function exception($e)
+    {
+        self::error($e->getCode(), $e->getMessage(), $e->getFile(), $e->getLine());
+    }
+
+    // 错误输出并终止程序
+    protected static function end()
+    {
+        $die = false;
+        self::pre();
+        foreach (self::$error as $error) {
+            $info = self::info($error);
+            Runtime::error($info);
+            self::show($info);
+            $die = true;
+        }
+        $die && die;
+    }
+
 }

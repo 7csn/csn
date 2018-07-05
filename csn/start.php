@@ -85,8 +85,8 @@ spl_autoload_register('\csn\Csn::load');
 //  自定义错误、异常
 // ----------------------------------------------------------------------
 
-set_error_handler('\csn\Exp::error');
-set_exception_handler('\csn\Exp::exception');
+set_error_handler('\csn\Csn::error');
+set_exception_handler('\csn\Csn::exception');
 
 // ----------------------------------------------------------------------
 //  框架初始化

@@ -9,7 +9,6 @@ final class Exp extends Instance
     protected static $meta;           // 显示编码
     protected static $pre;            // 开发样式
     protected static $table;          // 生产样式
-    protected static $error = [];     // 错误数组
     protected static $name = [];      // 错误名称数组
     protected static $status = ['y' => 0, 'n' => 1, 'a' => 2, 'e' => 3];
     // 常见错误类型
@@ -19,19 +18,6 @@ final class Exp extends Instance
         'Warning' => [E_WARNING, E_CORE_WARNING, E_COMPILE_WARNING, E_USER_WARNING],
         'Notice' => [E_NOTICE, E_USER_NOTICE],
     ];
-
-    // 自定义错误(非致命)处理
-    static function error($code, $msg, $file, $line)
-    {
-        self::$error[] = [$code, $msg, $file, $line];
-        DbInfo::getTransaction() || self::run();
-    }
-
-    // 自定义异常处理
-    static function exception($e)
-    {
-        self::error($e->getCode(), $e->getMessage(), $e->getFile(), $e->getLine());
-    }
 
     // 获取错误信息
     protected static function info($error)
@@ -54,20 +40,6 @@ final class Exp extends Instance
             self::$name[$code] = $name;
         }
         return self::$name[$code];
-    }
-
-    // 显示错误信息
-    protected static function run()
-    {
-        $die = false;
-        self::pre();
-        foreach (self::$error as $error) {
-            $info = self::info($error);
-            Runtime::error($info);
-            self::show($info);
-            $die = true;
-        }
-        $die && die;
     }
 
     // 错误信息
