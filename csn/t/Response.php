@@ -40,7 +40,7 @@ final class Response extends Instance
             // 访问日志
 //            Runtime::action();
             $run = is_string($point = $route['point']) ? $this->action($point, $route['args']) : call_user_func_array($point, self::actionParams((new \ReflectionFunction($point))->getParameters(), $route['args']));
-            exit(is_string($run) ? $run : json_encode($run));
+            is_null($run) || exit(is_string($run) ? $run : json_encode($run));
         }
     }
 

@@ -421,6 +421,7 @@ class Model extends Data
     function insert($field = null)
     {
         $this->field($field);
+        $tables = $this->parseTable();
         $fields = $this->parseField();
         $values = '';
         $bind = [];
@@ -432,7 +433,7 @@ class Model extends Data
             }
             $values .= '(' . rtrim($value, ',') . '),';
         }
-        $sql = 'INSERT INTO' . $this->parseTable() . ' (`' . implode('`,`', keys(current($fields))) . '`) VALUES ' . rtrim($values, ',');
+        $sql = 'INSERT INTO' . $tables . ' (`' . implode('`,`', array_keys($fields[0])) . '`) VALUES ' . rtrim($values, ',');
         return self::execute(function () use ($sql, $bind) {
             return is_null($bind) ? $sql : [$sql, $bind];
         });
@@ -454,11 +455,12 @@ class Model extends Data
         $this->field($field);
         $bind = $this->parse->bind;
         $set = [];
+        $tables = $this->parseTable();
         foreach (current($this->parseField()) as $k => $v) {
             $set[] = $k . ' = :' . $k . '__';
             $bind[$k . '__'] = is_array($v) ? serialize($v) : $v;
         }
-        $sql = 'UPDATE' . $this->parseTable() . $this->parseSql('on') . ' SET ' . implode(',', $set) . $this->parseWhere() . $this->parseSql('group') . $this->parseSql('order') . $this->parseSql('limit');
+        $sql = 'UPDATE' . $tables . $this->parseSql('on') . ' SET ' . implode(',', $set) . $this->parseWhere() . $this->parseSql('group') . $this->parseSql('order') . $this->parseSql('limit');
         return self::execute(function () use ($sql, $bind) {
             return is_null($bind) ? $sql : [$sql, $bind];
         });
@@ -569,7 +571,7 @@ class Model extends Data
             $arr = [];
             foreach ($tbInfos as $tbInfo) {
                 foreach ($tbInfo->list as $k => $v) {
-                    $v->Extra === 'auto_increment' || key_exists($k, $field) && $arr[$k] = self::parseValue($field[$k]);
+                    $v->Extra === 'auto_increment' || key_exists($k, $field) && $arr[$k] = self::parseValue($v, $field[$k]);
                 }
             }
             $fieldArr[] = $arr;
