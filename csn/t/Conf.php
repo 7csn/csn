@@ -76,7 +76,7 @@ class Conf extends Instance
     // 获取配置项具体信息
     protected static function gets($keys, $conf, $names)
     {
-        return key_exists($key = array_shift($keys), $conf) ? empty($keys) ? $conf[$key] : self::gets($keys, $conf[$key], $names) : Exp::end('配置项' . $names . '不存在');
+        return key_exists($key = array_shift($keys), $conf) ? empty($keys) ? $conf[$key] : self::gets($keys, $conf[$key], $names) : Csn::end('配置项' . $names . '不存在');
     }
 
     // 注册配置函数
@@ -94,7 +94,7 @@ class Conf extends Instance
             array_unshift($args, $name);
             return self::get(join('.', $args));
         } else {
-            Exp::end('配置函数' . $name . '未注册');
+            Csn::end('配置函数' . $name . '未注册');
         }
     }
 

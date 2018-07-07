@@ -13,7 +13,7 @@ final class View extends Instance
     {
         $this->path = $this->path($names);
         $this->html = RUN_HTML . $this->path . DS . Safe::en(Request::instance()->path()) . '.html';
-        is_file($this->view()) || Exp::end('找不到视图：' . $names);
+        is_file($this->view()) || Csn::end('找不到视图：' . $names);
         if (!is_file($this->php()) || filemtime($this->php()) < filemtime($this->view())) {
             File::write($this->php(), $this->compileGo(), true);
             File::rmDir(RUN_HTML . $this->path, true);
@@ -135,7 +135,7 @@ final class View extends Instance
         $names = $match[2];
         $path = $this->path($names);
         $source = self::source($path, true);
-        is_file($source) || Exp::end('找不到视图模板' . $path);
+        is_file($source) || Csn::end('找不到视图模板' . $path);
         $parent = file_get_contents($source);
         $this->compileSectionSave($parent);
         return $parent;

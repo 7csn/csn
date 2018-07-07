@@ -17,7 +17,7 @@ final class Safe
     {
         if (is_null(self::$secret)) {
             $file = APP . 'secret.ini';
-            is_file($file) || Exp::end('未检测到密钥文件，请先创建');
+            is_file($file) || Csn::end('未检测到密钥文件，请先创建');
             self::$secret = parse_ini_file($file);
         }
         return is_null($name) ? self::$secret : self::$secret[$name];
@@ -60,7 +60,7 @@ final class Safe
             $point = self::$safe[$name];
             return is_string($point) ? preg_match($point, $args[0]) : call_user_func_array($point, $args);
         } else {
-            Exp::end('验证函数' . $name . '无效，请检查safe配置文件');
+            Csn::end('验证函数' . $name . '无效，请检查safe配置文件');
         }
     }
 

@@ -57,27 +57,26 @@ final class Csn
     // ----------------------------------------------------------------------
 
     // 对照表：类名前缀=>路径前缀
-    protected static $load = ['csn\y\\' => CSN_Y, 'csn\\' => CSN_T, 'app\m\\' => APP_MODEL];
+    const LOAD = ['csn\y\\' => CSN_Y, 'csn\\' => CSN_T, 'app\m\\' => APP_MODEL];
 
     // 类自加载
     static function load($class)
     {
         if (is_null($search = self::search($class))) return;
-        $file = self::$load[$search[0]] . str_replace('\\', DS, $search[1]) . '.php';
-        is_file($file) ? self::need($file) : Exp::end('找不到类' . $class);
+        $file = self::LOAD[$search[0]] . str_replace('\\', DS, $search[1]) . '.php';
+        is_file($file) ? self::need($file) : Csn::end('找不到类' . $class);
     }
 
     // 检索类名前缀与路径前缀
     static function search($class)
     {
         $res = null;
-        foreach (self::$load as $k => $v) {
+        foreach (self::LOAD as $k => $v) {
             if (strpos($class, $k) === 0) {
                 $res = [$k, str_replace($k, '', $class)];
                 break;
             }
         }
-        reset(self::$load);
         return $res;
     }
 
@@ -86,7 +85,7 @@ final class Csn
     // ----------------------------------------------------------------------
 
     // 文件库
-    protected static $needs = [];
+    private static $needs = [];
 
     // 引入文件：文件路径
     static function need($file)
@@ -98,14 +97,27 @@ final class Csn
     //  自定义错误、异常
     // ----------------------------------------------------------------------
 
-    // 错误数组
-    protected static $error = [];
+    // 类型数组
+    const ERROR_TYPES = [
+        'Fatal Error' => [E_ERROR, E_CORE_ERROR, E_COMPILE_ERROR, E_USER_ERROR],
+        'Parse Error' => [E_PARSE, 0],
+        'Warning' => [E_WARNING, E_CORE_WARNING, E_COMPILE_WARNING, E_USER_WARNING],
+        'Notice' => [E_NOTICE, E_USER_NOTICE],
+    ];
 
-    // 错误(非致命)处理
-    static function error($code, $msg, $file, $line)
+    // 类型名称对照表
+    private static $errorName = [];
+
+    // 错误处理
+    static function error($type, $msg, $file, $line)
     {
-        self::$error[] = [$code, $msg, $file, $line];
-        DbInfo::getTransaction() || self::end();
+        DbInfo::getTransaction() ? DbInfo::rollBack() : self::closure($type, $msg, $file, $line);
+    }
+
+    // 致命错误处理
+    static function fatal()
+    {
+        if ($e = error_get_last()) self::error($e['type'], $e['message'], $e['file'], $e['line']);
     }
 
     // 异常处理
@@ -114,18 +126,141 @@ final class Csn
         self::error($e->getCode(), $e->getMessage(), $e->getFile(), $e->getLine());
     }
 
-    // 错误输出并终止程序
-    protected static function end()
+    // 结束程序
+    private static function closure()
     {
-        $die = false;
-        self::pre();
-        foreach (self::$error as $error) {
-            $info = self::info($error);
-            Runtime::error($info);
-            self::show($info);
-            $die = true;
-        }
-        $die && die;
+        $info = self::info(func_get_args());
+        Runtime::error($info);
+        self::show($info);
     }
 
+    // 获取错误信息
+    private static function info($error)
+    {
+        return self::type($error[0]) . '：[ ' . $error[1] . ' ][ ' . str_replace(WEB, '', $error[2]) . ' ][ ' . $error[3] . ' ]';
+    }
+
+    // 获取错误类型
+    private static function type($type)
+    {
+        if (!key_exists($type, self::$errorName)) {
+            $name = 'Other';
+            foreach (self::ERROR_TYPES as $k => $v) {
+                if (in_array($type, $v)) {
+                    $name = $k;
+                    break;
+                }
+            }
+            self::$errorName[$type] = $name;
+        }
+        return self::$errorName[$type];
+    }
+
+    // ----------------------------------------------------------------------
+    //  输出
+    // ----------------------------------------------------------------------
+
+    // 调试样式初始化
+    private static $pre;
+
+    // 显示调试样式
+    private static function pre()
+    {
+        if (self::$pre) {
+            echo '';
+        } else {
+            self::$pre = true;
+            self::charset();
+            echo '<style>.pre{padding:10px;margin:15px 10px;font-size:14px;line-height:1.5;color:#333;background:#f5f5f5;border:1px solid #ccc;border-radius:4px;overflow-x:auto}</style>';
+        }
+    }
+
+    // 生产样式
+    private static $table;
+
+    // 显示生产样式
+    private static function table()
+    {
+        if (self::$table) {
+            echo '';
+        } else {
+            self::$table = true;
+            self::charset();
+            echo '<style>.table{position:fixed;top:0;left:0;width:100%;height:100%;background:#fff;text-align:center;z-index:99999999}.table .div{color:#777;font-size:75px;font-family:宋体;padding:15px;display:inline-block;border:1px solid #777;border-radius:10px}</style>';
+        }
+    }
+
+    // 显示编码初始化
+    private static $charset;
+
+    // 显示编码
+    private static function charset()
+    {
+        if (self::$charset) {
+            echo '';
+        } else {
+            self::$charset = true;
+            echo '<meta charset="' . Conf::web('charset') . '">';
+        }
+    }
+
+    // 调试信息(不含类型)
+    static function show()
+    {
+        self::pre();
+        foreach (func_get_args() as $info) {
+            echo '<pre class="pre">';
+            print_r($info);
+            echo '</pre>';
+        }
+        return self::instance();
+    }
+
+    // 调试信息(含类型)
+    static function dump()
+    {
+        self::pre();
+        foreach (func_get_args() as $info) {
+            echo '<pre class="pre">';
+            var_dump($info);
+            echo '</pre>';
+        }
+        return self::instance();
+    }
+
+    // 生产模式显示信息
+    static function close($info, $url = '', $time = 0)
+    {
+        self::table();
+        $info = "<table class='table'><tr/><tr><td><div class='div'>{$info}</div></td></tr><tr/><tr/></table>";
+        echo $url ? $info : "<meta http-equiv='refresh' content = '$time;url=\"{$url}\"'>{$info}<script>setTimeout(function() { window.location.href = '$url'; }, $time);</script>";
+        return self::instance();
+    }
+
+    // 根据模式报错
+    static function end($msg)
+    {
+        T_S ? Csn::show($msg)->E() : Csn::close('页面不存在')->E();
+    }
+
+    // 结束程序
+    function E()
+    {
+        die;
+    }
+
+    // ----------------------------------------------------------------------
+    //  实例
+    // ----------------------------------------------------------------------
+
+    protected function __construct()
+    {
+    }
+
+    private static $instance;
+
+    private static function instance()
+    {
+        return is_null(self::$instance) ? self::$instance = new self() : self::$instance;
+    }
 }

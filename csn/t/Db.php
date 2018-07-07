@@ -57,7 +57,7 @@ class Db
     {
         is_bool($f) ? $c = $f : $this->field($f);
         $field = current($this->parseField());
-        empty($field) && Exp::end('Sql字段元素不正确！');
+        empty($field) && Csn::end('Sql字段元素不正确！');
         $bind = $this->parseBind();
         $set = [];
         foreach ($field as $k => $v) {
@@ -206,10 +206,10 @@ class Db
                         self::$dbs[$k] = $pdo;
                         self::$key = $k;
                     } catch (\PDOException $e) {
-                        Exp::end('[PDO]：' . str_replace("\n", '', iconv("GB2312// IGNORE", "UTF-8", $e->getMessage())));
+                        Csn::end('[PDO]：' . str_replace("\n", '', iconv("GB2312// IGNORE", "UTF-8", $e->getMessage())));
                     }
                 } else {
-                    Exp::end('找不到数据库配置键' . $k);
+                    Csn::end('找不到数据库配置键' . $k);
                 }
             }
             self::$pdo = self::$dbs[$k];
@@ -356,14 +356,14 @@ class Db
     // 获取表条件
     private function tablePart()
     {
-        key_exists('table', $this->sql_arr) || Exp::end('Sql表元素不存在！');
+        key_exists('table', $this->sql_arr) || Csn::end('Sql表元素不存在！');
         return $this->sql_arr['table'];
     }
 
     // 获取字段条件
     private function fieldPart()
     {
-        key_exists('field', $this->sql_arr) || Exp::end('Sql表字段不存在！');
+        key_exists('field', $this->sql_arr) || Csn::end('Sql表字段不存在！');
         return $this->sql_arr['field'];
     }
 

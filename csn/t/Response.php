@@ -34,7 +34,7 @@ final class Response extends Instance
 
     function export()
     {
-        is_null($route = self::$route) && Exp::end('路由未定义或有误');
+        is_null($route = self::$route) && Csn::end('路由未定义或有误');
         if (is_null($this->export)) {
             $this->export = true;
             // 访问日志
@@ -51,12 +51,12 @@ final class Response extends Instance
     function action($point, $args)
     {
         preg_match_all('/^(((\w+\/)*)(\w+))@(\w+)$/', $point, $match);
-        empty($match[0]) && Exp::end("路由 $point 指向异常");
+        empty($match[0]) && Csn::end("路由 $point 指向异常");
         $module = substr($match[2][0], 0, -1);
         $action = $match[5][0];
         // 加载控制器
         $controller = Controller::controller($match[4][0], $module);
-        method_exists($controller, $action) || Exp::end('控制器文件' . $match[1][0] . '.php找不到方法' . $action);
+        method_exists($controller, $action) || Csn::end('控制器文件' . $match[1][0] . '.php找不到方法' . $action);
         $rm = new \ReflectionMethod($controller, $action);
         return $rm->invokeArgs($controller, $this->actionParams($rm->getParameters(), $args));
     }
@@ -69,14 +69,14 @@ final class Response extends Instance
     {
         $paramsCount = count($params);
         $num = $paramsCount - count($args);
-        if ($num !== 0 && $num !== 1) Exp::end('路由指向方法参数数量有误');
+        if ($num !== 0 && $num !== 1) Csn::end('路由指向方法参数数量有误');
         if ($num === 1) {
-            is_null($class = $params[0]->getClass()) && Exp::end('路由指向方法首参需为对象');
-            $class->name === 'csn\Request' || Exp::end('路由指向方法首参需为Request对象');
+            is_null($class = $params[0]->getClass()) && Csn::end('路由指向方法首参需为对象');
+            $class->name === 'csn\Request' || Csn::end('路由指向方法首参需为Request对象');
             array_unshift($args, Request::instance());
         }
         for ($i = $num; $i < $paramsCount; $i++) {
-            $args[$i] === '{@}' && ($params[$i]->isDefaultValueAvailable() ? $args[$i] = $params[$i]->getDefaultValue() : Exp::end('路由指向方法参数' . $params[$i]->name . '无值'));
+            $args[$i] === '{@}' && ($params[$i]->isDefaultValueAvailable() ? $args[$i] = $params[$i]->getDefaultValue() : Csn::end('路由指向方法参数' . $params[$i]->name . '无值'));
         }
         return $args;
     }

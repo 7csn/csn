@@ -34,10 +34,10 @@ class Controller
     {
         $name = ($module ? str_replace('/', DS, $module) . DS : '') . $controller;
         if (key_exists($controller, self::$controllers)) {
-            self::$controllers[$controller]['name'] === $name || Exp::end('禁止跨模块引入同名控制器');
+            self::$controllers[$controller]['name'] === $name || Csn::end('禁止跨模块引入同名控制器');
             return self::$controllers[$controller]['obj'];
         }
-        is_file($file = APP_CONTROLLER . $name . '.php') ? Csn::need($file) : Exp::end('控制器' . $name . '不存在');
+        is_file($file = APP_CONTROLLER . $name . '.php') ? Csn::need($file) : Csn::end('控制器' . $name . '不存在');
         $class = '\app\c\\' . $controller;
         self::$controllers[$controller] = ['name' => $name, 'obj' => new $class()];
         return self::$controllers[$controller]['obj'];
@@ -67,7 +67,7 @@ class Controller
 
     final static function redirect($url, $info = false, $time = 1000)
     {
-        $info && Exp::close($info, "<script>setTimeout(function() { window.location.href = '$url'; }, $time);</script>")->E();
+        $info && Csn::close($info, $url, $time)->E();
         usleep($time * 1000);
         header('Location:' . $url);
         die;

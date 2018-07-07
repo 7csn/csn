@@ -64,7 +64,7 @@ final class File
             $list['type'] = 'file';
             $list['size'] = filesize($path);
         } else {
-            Exp::end('路径' . $path . '异常');
+            Csn::end('路径' . $path . '异常');
         }
         return $list;
     }

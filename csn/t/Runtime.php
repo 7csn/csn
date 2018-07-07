@@ -5,6 +5,10 @@ namespace csn;
 class Runtime
 {
 
+    // ----------------------------------------------------------------------
+    //  错误、异常
+    // ----------------------------------------------------------------------
+
     static $log = [];
 
     // 获取日志项
@@ -14,7 +18,7 @@ class Runtime
         if (!key_exists($name, self::$log)) {
             $get = Conf::runtime($name);
             foreach (['set', 'file', 'size'] as $v) {
-                key_exists($v, $get) || Exp::end('日志项' . $name . '配置不正确');
+                key_exists($v, $get) || Csn::end('日志项' . $name . '配置不正确');
             }
             self::$log[$name] = $get;
         }
@@ -53,7 +57,7 @@ class Runtime
             File::append($file, $info);
         }
         $size = $log['size'];
-        is_int($size) && $size > 0 ? self::limit($dir, $size) : Exp::end('日志项' . $name . '配置size不正确');
+        is_int($size) && $size > 0 ? self::limit($dir, $size) : Csn::end('日志项' . $name . '配置size不正确');
     }
 
     // 记录访问日志

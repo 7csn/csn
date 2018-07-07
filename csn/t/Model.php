@@ -48,22 +48,18 @@ class Model extends Data
         if (key_exists($address, $link)) {
             return $link[$address];
         } else {
-            Exp::end('数据库' . $address . '连接信息不存在');
+            Csn::end('数据库' . $address . '连接信息不存在');
         }
     }
 
     // 数据库连接
     protected static function connect($address)
     {
-        return key_exists($address, DbInfo::$links) ? DbInfo::$links[$address] : DbInfo::$links[$address] = call_user_func(function($address) {
+        return key_exists($address, DbInfo::$links) ? DbInfo::$links[$address] : DbInfo::$links[$address] = call_user_func(function ($address) {
             list($host, $port) = explode(':', $address);
-            try {
-                $node = self::node($address);
-                $link = new \PDO("mysql:host=$host;port=$port", $node['du'], $node['dp']);
-                DbInfo::$dbInfos[$address] = ['dbn' => $node['dbn'], 'dbn_now' => null];
-            } catch (\PDOException $e) {
-                Exp::end('[PDO]：' . str_replace("\n", '', iconv("GB2312// IGNORE", "UTF-8", $e->getMessage())));
-            }
+            $node = self::node($address);
+            $link = new \PDO("mysql:host=$host;port=$port", $node['du'], $node['dp']);
+            DbInfo::$dbInfos[$address] = ['dbn' => $node['dbn'], 'dbn_now' => null];
             return $link;
         }, $address);
     }
@@ -132,7 +128,7 @@ class Model extends Data
         $dbInfo = DbInfo::$dbInfos[$address];
         $dbn = self::$dbn ?: $dbInfo['dbn'];
         if ($dbn !== $dbInfo['dbn_now']) {
-            in_array($dbn, self::dbns($link, $dbn)) ? $link->query(" USE `$dbn` ") : Exp::end('服务器 ' . $address . ' 不存在数据库 ' . $dbn);
+            in_array($dbn, self::dbns($link, $dbn)) ? $link->query(" USE `$dbn` ") : Csn::end('服务器 ' . $address . ' 不存在数据库 ' . $dbn);
             DbInfo::$dbInfos[$address]['db_now'] = $dbn;
         }
         return $link;
@@ -141,7 +137,7 @@ class Model extends Data
     // 获取数据库列表
     protected static function dbns($link, $address)
     {
-        return key_exists($address, DbInfo::$dbns) ? DbInfo::$dbns[$address] : DbInfo::$dbns[$address] = call_user_func(function($link) {
+        return key_exists($address, DbInfo::$dbns) ? DbInfo::$dbns[$address] : DbInfo::$dbns[$address] = call_user_func(function ($link) {
             $sth = $link->query(" SHOW DATABASES ");
             $dbns = [];
             foreach (self::res($sth) as $v) {
@@ -155,18 +151,18 @@ class Model extends Data
     protected static function names()
     {
         $class = get_called_class();
-        $class::$tbn || call_user_func(function($class) {
-            if ($class === 'csn\Model' || strpos($class, 'app\\m\\') === 0) {
+        $class::$tbn || call_user_func(function ($class) {
+            if (strpos($class, 'app\\m\\') === 0) {
                 $arr = array_reverse(explode('\\', substr($class, 6)));
                 $count = count($arr);
                 if ($count === 0) {
-                    Exp::end('数据库模型' . $class . '异常');
+                    Csn::end('数据库模型' . $class . '异常');
                 } else {
                     $class::$tbn = strtolower($arr[0]);
                     $class::$dbn = key_exists(1, $arr) ? strtolower($arr[1]) : false;
                 }
             } else {
-                Exp::end('数据库模型' . $class . '异常');
+                Csn::end('数据库模型' . $class . '异常');
             }
         }, $class);
         return $class;
@@ -191,7 +187,7 @@ class Model extends Data
     {
         is_null($tbn) && $tbn = self::tbn();
         $key = self::dbn() . '@' . $tbn;
-        return key_exists($key, DbInfo::$descs) ? DbInfo::$descs[$key] : DbInfo::$descs[$key] = call_user_func(function($tbn) {
+        return key_exists($key, DbInfo::$descs) ? DbInfo::$descs[$key] : DbInfo::$descs[$key] = call_user_func(function ($tbn) {
             $desc = new \stdClass();
             $desc->list = new \stdClass();
             $desc->primaryKey = null;
@@ -199,7 +195,7 @@ class Model extends Data
                 return " DESC `$tbn` ";
             }, false, $tbn) as $v) {
                 $v->Key === 'PRI' && $desc->primaryKey = $v->Field;
-                $desc->list->{$v->Field} = call_user_func(function($row) {
+                $desc->list->{$v->Field} = call_user_func(function ($row) {
                     unset($row->Field);
                     return $row;
                 }, $v);
@@ -242,7 +238,7 @@ class Model extends Data
     {
         $desc = self::desc();
         $primaryKey = $desc->primaryKey;
-        return is_null($primaryKey) ? Exp::end((self::dbn() ? '库' . self::dbn() : '默认库') . '中表' . self::tbn() . '主键不存在') : [$primaryKey, self::parseValue($desc->list->$primaryKey, $id)];
+        return is_null($primaryKey) ? Csn::end((self::dbn() ? '库' . self::dbn() : '默认库') . '中表' . self::tbn() . '主键不存在') : [$primaryKey, self::parseValue($desc->list->$primaryKey, $id)];
     }
 
     // ----------------------------------------------------------------------
@@ -375,7 +371,7 @@ class Model extends Data
     // 预编译
     function bind($bind)
     {
-        empty($bind) || call_user_func(function($obj, $bind) {
+        empty($bind) || call_user_func(function ($obj, $bind) {
             $obj->parse->bind = is_null($b = $obj->parse->bind) ? $bind : array_merge($b, $bind);
         }, $this, $bind);
         return $this;

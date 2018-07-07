@@ -82,10 +82,12 @@ include CSN_T . 'Csn.php';
 spl_autoload_register('\csn\Csn::load');
 
 // ----------------------------------------------------------------------
-//  自定义错误、异常
+//  自定义错误异常：关闭错误输出、错误、致命错误、异常
 // ----------------------------------------------------------------------
 
+ini_set('display_errors', 'Off');
 set_error_handler('\csn\Csn::error');
+register_shutdown_function('\csn\Csn::fatal');
 set_exception_handler('\csn\Csn::exception');
 
 // ----------------------------------------------------------------------

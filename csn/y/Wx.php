@@ -14,7 +14,7 @@ class Wx
     {
         self::$wx || self::$wx = \csn\Conf::wx();
         if (!$name) return self::$wx;
-        return key_exists($name, self::$wx) ? self::$wx[$name] : \csn\Exp::close('微信项' . $name . '配置不正确')->E();
+        return key_exists($name, self::$wx) ? self::$wx[$name] : \csn\Csn::end('微信项' . $name . '配置不正确');
     }
 
     static function getSignPackage()

@@ -60,7 +60,7 @@ class Http extends Instance
             array_unshift($args, strtoupper($name));
             return call_user_func_array([$this, 'exec'], $args);
         } else {
-            Exp::end('http方法' . $name . '不存在');
+            Csn::end('http方法' . $name . '不存在');
         }
     }
 
