@@ -6,76 +6,64 @@ class Runtime
 {
 
     // ----------------------------------------------------------------------
-    //  错误、异常
+    //  记录访问日志
     // ----------------------------------------------------------------------
 
-    static $log = [];
-
-    // 获取日志项
-    static function get($name)
-    {
-        key_exists($name, self::$log) || self::$log[$name] = Conf::runtime($name);
-        if (!key_exists($name, self::$log)) {
-            $get = Conf::runtime($name);
-            foreach (['set', 'file', 'size'] as $v) {
-                key_exists($v, $get) || Csn::end('日志项' . $name . '配置不正确');
-            }
-            self::$log[$name] = $get;
-        }
-        return self::$log[$name];
-    }
-
-    // 访问日志
     static function action()
     {
-        self::set('act');
+        self::set('action', StdClass::instance(function () {
+            $time = date('His');
+            if (is_file($file = RUN . 'action' . DS . date('Ymd') . DS . Request::instance()->path() . '.json')) {
+                $action = json_decode(file_get_contents($file), true);
+                $action['count']++;
+                key_exists($time, $action['details']) ? $action['details'][$time]++ : $action['details'][$time] = 1;
+            } else {
+                $action = ['count' => 1, 'details' => [$time => 1]];
+            }
+            File::write($file, json_encode($action), true);
+        }));
     }
 
-    // 错误日志
+    // ----------------------------------------------------------------------
+    //  记录错误日志
+    // ----------------------------------------------------------------------
+
     static function error($info)
     {
-        self::set('bug', date('H:i:s') . ' ' . Request::instance()->uri() . "\n\t" . $info . "\n");
+        self::set('error', StdClass::instance(function ($info) {
+            File::append(RUN . 'error' . DS . date('Ymd') . DS . date('H') . '.log', $info);
+        })->args($info));
     }
 
-    // SQL日志
+    // ----------------------------------------------------------------------
+    //  记录SQL日志
+    // ----------------------------------------------------------------------
+
     static function sql($info)
     {
-        self::set('sql', $info);
+        self::set('sql', StdClass::instance(function ($info) {
+            File::append(RUN . 'sql' . DS . date('Ymd') . DS . date('H') . '.log', $info);
+        })->args($info));
     }
 
-    // 记录日志
-    protected static function set($name, $info = '')
+    // ----------------------------------------------------------------------
+    //  记录日志记录模板
+    // ----------------------------------------------------------------------
+
+    private static function set($type, $stdClass)
     {
-        $log = self::get($name);
-        if (!$log['set']) return;
-        $dir = RUN . str_replace('.', DS, $log['dir']) . DS;
-        if ($name === 'act') {
-            $file = $dir . date('Ymd') . DS . Route::$define . DS . Route::$path . '.json';
-            self::actSave($file);
-        } else {
-            $file = $dir . date('Ymd') . DS . date('H') . '.log';
-            File::append($file, $info);
+        if (Conf::runtime($type . '.set')) {
+            $stdClass->run();
+            $size = Conf::runtime('error.size');
+            is_int($size) && $size > 0 ? self::limit(RUN . $type . DS, $size) : Csn::end("日志项 $type 配置 size 不正确");
         }
-        $size = $log['size'];
-        is_int($size) && $size > 0 ? self::limit($dir, $size) : Csn::end('日志项' . $name . '配置size不正确');
     }
 
-    // 记录访问日志
-    protected static function actSave($file)
-    {
-        $time = date('His');
-        if (is_file($file)) {
-            $act = json_decode(file_get_contents($file), true);
-            $act['count']++;
-            key_exists($time, $act['details']) ? $act['details'][$time]++ : $act['details'][$time] = 1;
-        } else {
-            $act = ['count' => 1, 'details' => [$time => 1]];
-        }
-        File::write($file, json_encode($act), true);
-    }
+    // ----------------------------------------------------------------------
+    //  保持日志上限[删除旧版]
+    // ----------------------------------------------------------------------
 
-    // 保持日志上限[删除旧版]
-    protected static function limit($dir, $limit)
+    private static function limit($dir, $limit)
     {
         $list = File::lists($dir);
         $size = $list['size'];

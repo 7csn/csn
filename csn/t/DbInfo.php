@@ -47,11 +47,4 @@ class DbInfo
         DbInfo::$transaction = $status;
     }
 
-    // 事务回滚
-    static function rollBack()
-    {
-        self::$transaction->rollBack();
-        self::setTransaction(false);
-    }
-
 }

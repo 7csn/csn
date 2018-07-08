@@ -57,13 +57,13 @@ final class Csn
     // ----------------------------------------------------------------------
 
     // 对照表：类名前缀=>路径前缀
-    const LOAD = ['csn\y\\' => CSN_Y, 'csn\\' => CSN_T, 'app\m\\' => APP_MODEL];
+    private static $load = ['csn\y\\' => CSN_Y, 'csn\\' => CSN_T, 'app\m\\' => APP_MODEL];
 
     // 类自加载
     static function load($class)
     {
         if (is_null($search = self::search($class))) return;
-        $file = self::LOAD[$search[0]] . str_replace('\\', DS, $search[1]) . '.php';
+        $file = self::$load[$search[0]] . str_replace('\\', DS, $search[1]) . '.php';
         is_file($file) ? self::need($file) : Csn::end('找不到类' . $class);
     }
 
@@ -71,7 +71,7 @@ final class Csn
     static function search($class)
     {
         $res = null;
-        foreach (self::LOAD as $k => $v) {
+        foreach (self::$load as $k => $v) {
             if (strpos($class, $k) === 0) {
                 $res = [$k, str_replace($k, '', $class)];
                 break;
@@ -98,7 +98,7 @@ final class Csn
     // ----------------------------------------------------------------------
 
     // 类型数组
-    const ERROR_TYPES = [
+    private static $errorTypes = [
         'Fatal Error' => [E_ERROR, E_CORE_ERROR, E_COMPILE_ERROR, E_USER_ERROR],
         'Parse Error' => [E_PARSE, 0],
         'Warning' => [E_WARNING, E_CORE_WARNING, E_COMPILE_WARNING, E_USER_WARNING],
@@ -111,7 +111,7 @@ final class Csn
     // 错误处理
     static function error($type, $msg, $file, $line)
     {
-        DbInfo::getTransaction() ? DbInfo::rollBack() : self::closure($type, $msg, $file, $line);
+        DbInfo::getTransaction() || self::closure($type, $msg, $file, $line);
     }
 
     // 致命错误处理
@@ -127,9 +127,9 @@ final class Csn
     }
 
     // 结束程序
-    private static function closure()
+    private static function closure($type, $msg, $file, $line)
     {
-        $info = self::info(func_get_args());
+        $info = self::info($type, $msg, $file, $line);
         Runtime::error($info);
         self::show($info);
     }
@@ -145,7 +145,7 @@ final class Csn
     {
         if (!key_exists($type, self::$errorName)) {
             $name = 'Other';
-            foreach (self::ERROR_TYPES as $k => $v) {
+            foreach (self::$errorTypes as $k => $v) {
                 if (in_array($type, $v)) {
                     $name = $k;
                     break;

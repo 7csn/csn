@@ -276,9 +276,11 @@ class Model extends Data
     {
         $link = self::connect(self::master());
         $link->beginTransaction();
-        DbInfo::setTransaction($link);
+        DbInfo::setTransaction(true);
+        echo '1111111';
         $link->{($res = call_user_func($func, $link)) ? 'rollBack' : 'commit'}();
         DbInfo::setTransaction();
+        echo '2222222';
         return $res;
     }
 

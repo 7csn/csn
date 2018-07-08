@@ -12,11 +12,11 @@ final class View extends Instance
     function construct($names)
     {
         $this->path = $this->path($names);
-        $this->html = RUN_HTML . $this->path . DS . Safe::en(Request::instance()->path()) . '.html';
+        $this->html = WEB_STATIC . $this->path . DS . Safe::en(Request::instance()->path()) . '.html';
         is_file($this->view()) || Csn::end('找不到视图：' . $names);
         if (!is_file($this->php()) || filemtime($this->php()) < filemtime($this->view())) {
             File::write($this->php(), $this->compileGo(), true);
-            File::rmDir(RUN_HTML . $this->path, true);
+            File::rmDir(WEB_STATIC . $this->path, true);
         }
     }
 
@@ -60,7 +60,7 @@ final class View extends Instance
 
     private function php()
     {
-        return key_exists($this->path, self::$phps) ? self::$phps[$this->path] : self::$phps[$this->path] = RUN_PHP . $this->path . '.php';
+        return key_exists($this->path, self::$phps) ? self::$phps[$this->path] : self::$phps[$this->path] = WEB_COMPILE . $this->path . '.php';
     }
 
     // ----------------------------------------------------------------------
