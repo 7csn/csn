@@ -6,12 +6,6 @@ final class Db extends DbBase
 {
 
     // ----------------------------------------------------------------------
-    //  配置信息
-    // ----------------------------------------------------------------------
-
-    private static $config;
-
-    // ----------------------------------------------------------------------
     //  单例
     // ----------------------------------------------------------------------
 
@@ -19,20 +13,23 @@ final class Db extends DbBase
 
     private static function instance()
     {
-        if (is_null(self::$instance)) {
-            self::$instance = new self();
-            self::$config = Config::data('db');
-        }
-        return self::$instance;
+        return is_null(self::$instance) ? self::$instance = new self() : self::$instance;
     }
 
     // ----------------------------------------------------------------------
     //  指定连接并返回对象
     // ----------------------------------------------------------------------
 
+    // 当前连接
+    private static $link;
+
     static function link($key)
     {
-        return self::instance()->connect($key);
+        $dbs = Config::data('dbs.db');
+        key_exists($key, $dbs) || Csn::end();
+        $address = $dbs[$key];
+        self::$link = self::connect($address);
+        return self::instance();
     }
 
     // ----------------------------------------------------------------------
@@ -41,30 +38,6 @@ final class Db extends DbBase
 
     // 当前连接定位
     private static $key;
-
-    // 当前连接
-    private static $link;
-
-    // 获取连接
-    static function connect($key = 0)
-    {
-        self::$key === $key || call_user_func(function($key) {
-            key_exists($key, self::$dbs) || call_user_func(function($key) {
-                if (key_exists($key, self::$config)) {
-                    $con = self::$config[$key];
-                    $pdo = new \PDO("mysql:host={$con['dh']}", $con['du'], $con['dp']);
-                    $pdo->query('SET NAMES utf8');
-                    self::$arr[$key] = ['db' => $con['db'], '_db' => null, 'th' => $con['dth']];
-                    self::$dbs[$key] = $pdo;
-                    self::$key = $key;
-                } else {
-                    Csn::end('找不到数据库配置键' . $key);
-                }
-            }, $key);
-            self::$link = self::$dbs[$key];
-        }, $key);
-        return self::instance();
-    }
 
     static private $dbs = [];
     static private $arr = [];

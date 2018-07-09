@@ -50,33 +50,6 @@ class Model extends DbBase
     }
 
     // ----------------------------------------------------------------------
-    //  数据库连接
-    // ----------------------------------------------------------------------
-
-    // 获取数据库相关信息
-    final protected static function node($address)
-    {
-        $link = Config::data('model.link');
-        if (key_exists($address, $link)) {
-            return $link[$address];
-        } else {
-            Csn::end('数据库' . $address . '连接信息不存在');
-        }
-    }
-
-    // 数据库连接
-    final protected static function connect($address)
-    {
-        return key_exists($address, self::$links) ? self::$links[$address] : self::$links[$address] = call_user_func(function ($address) {
-            list($host, $port) = explode(':', $address);
-            $node = self::node($address);
-            $link = new \PDO("mysql:host=$host;port=$port", $node['du'], $node['dp']);
-            self::$dbInfos[$address] = ['dbn' => $node['dbn'], 'dbn_now' => null];
-            return $link;
-        }, $address);
-    }
-
-    // ----------------------------------------------------------------------
     //  表SQL封装
     // ----------------------------------------------------------------------
 
