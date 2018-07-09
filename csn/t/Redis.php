@@ -12,7 +12,7 @@ class Redis
     // 配置信息
     private static function conf()
     {
-        return is_null(self::$conf) ? self::$conf = Conf::data('redis') : self::$conf;
+        return is_null(self::$conf) ? self::$conf = Config::data('redis') : self::$conf;
     }
 
     // Redis对象

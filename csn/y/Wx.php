@@ -12,7 +12,7 @@ class Wx
     // 获取微信相关配置
     protected static function get($name = false)
     {
-        self::$wx || self::$wx = \csn\Conf::wx();
+        self::$wx || self::$wx = \csn\Config::wx();
         if (!$name) return self::$wx;
         return key_exists($name, self::$wx) ? self::$wx[$name] : \csn\Csn::end('微信项' . $name . '配置不正确');
     }

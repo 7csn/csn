@@ -196,7 +196,7 @@ class Db
     {
         if (self::$key !== $k) {
             if (!isset(self::$dbs[$k])) {
-                $db = Conf::data('db');
+                $db = Config::data('db');
                 if (key_exists($k, $db)) {
                     $con = $db[$k];
                     try {

@@ -11,10 +11,10 @@ class Session extends Instance
     static function init()
     {
         if (is_null(self::$init)) {
-            $session = Conf::data('session');
+            $session = Config::data('session');
             if ($session['memcache']) {
                 ini_set('session.save_handler', 'memcache');
-                ini_set('session.save_path', 'tcp://' . join(';tcp://', Conf::data('memcache.nodes')));
+                ini_set('session.save_path', 'tcp://' . join(';tcp://', Config::data('memcache.nodes')));
             } else {
                 File::mkDir(RUN_S);
                 ini_set('session.save_path', RUN_S);

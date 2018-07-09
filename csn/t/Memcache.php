@@ -13,7 +13,7 @@ class Memcache
     static function conf()
     {
         if (is_null(self::$conf)) {
-            foreach (Conf::data('memcache') as $k => $v) {
+            foreach (Config::data('memcache') as $k => $v) {
                 is_int($k) ? self::$conf[$v] = 1 : self::$conf[$k] = $v;
             }
         }

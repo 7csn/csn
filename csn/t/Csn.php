@@ -16,15 +16,15 @@ final class Csn
         // 引入框架常用方法
         self::need(CSN_X . 'func.php');
         // 是否调试模式
-        defined('T_S') || define('T_S', Conf::web('debug'));
+        defined('T_S') || define('T_S', Config::web('debug'));
         // 设置编码
-        header('Content-Type:text/html;charset=' . Conf::web('charset'));
+        header('Content-Type:text/html;charset=' . Config::web('charset'));
         // 设置时区
-        date_default_timezone_set(Conf::web('timezone'));
+        date_default_timezone_set(Config::web('timezone'));
         // 路由分隔符
-        define('SP', Conf::web('separator'));
+        define('SP', Config::web('separator'));
         // 项目配置初始化
-        defined('CT') && Conf::init();
+        defined('CT') && Config::init();
         // 获取浏览器信息
         define('UA', isset($_SERVER['HTTP_USER_AGENT']) ? $_SERVER['HTTP_USER_AGENT'] : null);
     }
@@ -47,6 +47,7 @@ final class Csn
 
     static function cmd()
     {
+        die('The function is temporarily not on-line.');
         print_r($_SERVER['argc']);
         echo "\n";
         print_r($_SERVER['argv']);
@@ -100,7 +101,7 @@ final class Csn
     // 类型数组
     private static $errorTypes = [
         'Fatal Error' => [E_ERROR, E_CORE_ERROR, E_COMPILE_ERROR, E_USER_ERROR],
-        'Parse Error' => [E_PARSE, 0],
+        'Parse Error' => [E_PARSE],
         'Warning' => [E_WARNING, E_CORE_WARNING, E_COMPILE_WARNING, E_USER_WARNING],
         'Notice' => [E_NOTICE, E_USER_NOTICE],
     ];
@@ -109,9 +110,9 @@ final class Csn
     private static $errorName = [];
 
     // 错误处理
-    static function error($type, $msg, $file, $line)
+    static function error($code, $msg, $file, $line)
     {
-        DbInfo::getTransaction() || self::closure($type, $msg, $file, $line);
+        DbInfo::getTransaction() || self::closure($code, $msg, $file, $line);
     }
 
     // 致命错误处理
@@ -127,33 +128,33 @@ final class Csn
     }
 
     // 结束程序
-    private static function closure($type, $msg, $file, $line)
+    private static function closure($code, $msg, $file, $line)
     {
-        $info = self::info($type, $msg, $file, $line);
+        $info = self::info($code, $msg, $file, $line);
         Runtime::error($info);
         self::show($info);
     }
 
     // 获取错误信息
-    private static function info($error)
+    private static function info($code, $msg, $file, $line)
     {
-        return self::type($error[0]) . '：[ ' . $error[1] . ' ][ ' . str_replace(WEB, '', $error[2]) . ' ][ ' . $error[3] . ' ]';
+        return self::type($code) . '：[ ' . $msg . ' ][ ' . str_replace(WEB, '', $file) . ' ][ ' . $line . ' ]';
     }
 
     // 获取错误类型
-    private static function type($type)
+    private static function type($code)
     {
-        if (!key_exists($type, self::$errorName)) {
+        if (!key_exists($code, self::$errorName)) {
             $name = 'Other';
             foreach (self::$errorTypes as $k => $v) {
-                if (in_array($type, $v)) {
+                if (in_array($code, $v)) {
                     $name = $k;
                     break;
                 }
             }
-            self::$errorName[$type] = $name;
+            self::$errorName[$code] = $name;
         }
-        return self::$errorName[$type];
+        return self::$errorName[$code];
     }
 
     // ----------------------------------------------------------------------
@@ -200,7 +201,7 @@ final class Csn
             echo '';
         } else {
             self::$charset = true;
-            echo '<meta charset="' . Conf::web('charset') . '">';
+            echo '<meta charset="' . Config::web('charset') . '">';
         }
     }
 

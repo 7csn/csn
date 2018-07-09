@@ -2,7 +2,7 @@
 
 namespace csn;
 
-class Runtime
+final class Runtime
 {
 
     // ----------------------------------------------------------------------
@@ -31,7 +31,8 @@ class Runtime
     static function error($info)
     {
         self::set('error', StdClass::instance(function ($info) {
-            File::append(RUN . 'error' . DS . date('Ymd') . DS . date('H') . '.log', $info);
+            list($date, $hour, $minute) = explode(' ', date('Ymd H i:s'));
+            File::append(RUN . 'error' . DS . $date . DS . $hour . '.log', $minute . ' ' . $info . ENTER);
         })->args($info));
     }
 
@@ -42,7 +43,8 @@ class Runtime
     static function sql($info)
     {
         self::set('sql', StdClass::instance(function ($info) {
-            File::append(RUN . 'sql' . DS . date('Ymd') . DS . date('H') . '.log', $info);
+            list($date, $hour, $minute) = explode(' ', date('Ymd H i:s'));
+            File::append(RUN . 'sql' . DS . $date . DS . $hour . '.log', $minute . ' ' . $info . ENTER);
         })->args($info));
     }
 
@@ -52,15 +54,15 @@ class Runtime
 
     private static function set($type, $stdClass)
     {
-        if (Conf::runtime($type . '.set')) {
+        if (Config::runtime($type . '.set')) {
             $stdClass->run();
-            $size = Conf::runtime('error.size');
+            $size = Config::runtime($type . '.size');
             is_int($size) && $size > 0 ? self::limit(RUN . $type . DS, $size) : Csn::end("日志项 $type 配置 size 不正确");
         }
     }
 
     // ----------------------------------------------------------------------
-    //  保持日志上限[删除旧版]
+    //  保持日志存储上限[删除旧版]
     // ----------------------------------------------------------------------
 
     private static function limit($dir, $limit)

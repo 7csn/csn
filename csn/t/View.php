@@ -69,7 +69,7 @@ final class View extends Instance
 
     private function htmlOK($time = null)
     {
-        return is_file($this->html) && filemtime($this->html) + (is_null($time) ? Conf::web('view_cache') : $time) > CSN_START;
+        return is_file($this->html) && filemtime($this->html) + (is_null($time) ? Config::web('view_cache') : $time) > CSN_START;
     }
 
     // ----------------------------------------------------------------------

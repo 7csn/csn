@@ -13,7 +13,7 @@ class Model extends Data
     protected static function writes()
     {
         if (is_null(DbInfo::$ws)) {
-            list(DbInfo::$ws, DbInfo::$ms) = MS::init(Conf::data('model.nodes'));
+            list(DbInfo::$ws, DbInfo::$ms) = MS::init(Config::data('model.nodes'));
         }
         return DbInfo::$ws;
     }
@@ -44,7 +44,7 @@ class Model extends Data
     // 获取数据库相关信息
     protected static function node($address)
     {
-        $link = Conf::data('model.link');
+        $link = Config::data('model.link');
         if (key_exists($address, $link)) {
             return $link[$address];
         } else {

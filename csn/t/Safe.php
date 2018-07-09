@@ -26,7 +26,7 @@ final class Safe
     // 初始化文件：是否重置
     static function secretInit($anew = false)
     {
-        File::write(APP . 'secret.ini', "key='" . md5(Conf::web('safe_key')) . "'\nlock='" . str_shuffle(Conf::web('base_code')) . "'", $anew);
+        File::write(APP . 'secret.ini', "key='" . md5(Config::web('safe_key')) . "'\nlock='" . str_shuffle(Config::web('base_code')) . "'", $anew);
     }
 
     // ----------------------------------------------------------------------
@@ -46,7 +46,7 @@ final class Safe
     protected static function filterArr()
     {
         $safe = [];
-        foreach (Conf::safe() as $k => $v) {
+        foreach (Config::safe() as $k => $v) {
             $safe['is' . ucfirst($k)] = $v;
         }
         return $safe;

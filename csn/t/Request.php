@@ -16,7 +16,7 @@ final class Request extends Instance
         $index = strrpos($scriptName, '/');
         // 前缀URL目录：前端、后端
         define('WEB_PRE', substr($scriptName, 0, $index));
-        define('PHP_PRE', Conf::web('rewrite') ? WEB_PRE : $scriptName);
+        define('PHP_PRE', Config::web('rewrite') ? WEB_PRE : $scriptName);
         $this->query = $_SERVER['QUERY_STRING'];
         $this->uri = isset($_SERVER['REQUEST_URI']) ? $_SERVER['REQUEST_URI'] : $_SERVER['PHP_SELF'] . ($_SERVER['QUERY_STRING'] ? '?' . $_SERVER['QUERY_STRING'] : '');
         $uri = preg_replace('/\.html$/', '', preg_replace("/^(\/[^\?&#]+)?.*?$/", '\1', $this->uri));
@@ -27,7 +27,7 @@ final class Request extends Instance
         $this->host = isset($_SERVER['HTTP_HOST']) ? $_SERVER['HTTP_HOST'] : '';
         $this->url = $this->protocol . '://' . $this->host . $this->uri;
         $this->method = $_SERVER['REQUEST_METHOD'];
-        $this->isAjax = (isset($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) == 'xmlhttprequest') || key_exists(Conf::web('ajax'), $_POST) || key_exists(Conf::web('ajax'), $_GET);
+        $this->isAjax = (isset($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) == 'xmlhttprequest') || key_exists(Config::web('ajax'), $_POST) || key_exists(Config::web('ajax'), $_GET);
         $this->ip = $this->ip();
         $this->mobile = $this->mobile();
         return self::single();

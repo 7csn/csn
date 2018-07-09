@@ -5,7 +5,7 @@ namespace app\c;
 // 获取配置信息
 function C($n)
 {
-    return \csn\Conf::get($n);
+    return \csn\Config::get($n);
 }
 
 // 生产报错
