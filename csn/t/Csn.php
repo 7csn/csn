@@ -11,10 +11,8 @@ final class Csn
 
     static function init()
     {
-        // 引入框架字母方法
-        self::need(CSN_X . 'latin.php');
-        // 引入框架常用方法
-        self::need(CSN_X . 'func.php');
+        // 引入框架助手函数
+        self::need(CSN_X . 'helper.php');
         // 是否调试模式
         defined('T_S') || define('T_S', Config::web('debug'));
         // 设置编码
@@ -112,7 +110,7 @@ final class Csn
     // 错误处理
     static function error($code, $msg, $file, $line)
     {
-        DbInfo::getTransaction() || self::closure($code, $msg, $file, $line);
+        DbInfo::getTrans() || self::closure($code, $msg, $file, $line);
     }
 
     // 致命错误处理
@@ -214,7 +212,7 @@ final class Csn
             print_r($info);
             echo '</pre>';
         }
-        return self::instance();
+        die;
     }
 
     // 调试信息(含类型)
@@ -226,7 +224,7 @@ final class Csn
             var_dump($info);
             echo '</pre>';
         }
-        return self::instance();
+        die;
     }
 
     // 生产模式显示信息
@@ -235,33 +233,13 @@ final class Csn
         self::table();
         $info = "<table class='table'><tr/><tr><td><div class='div'>{$info}</div></td></tr><tr/><tr/></table>";
         echo $url ? $info : "<meta http-equiv='refresh' content = '$time;url=\"{$url}\"'>{$info}<script>setTimeout(function() { window.location.href = '$url'; }, $time);</script>";
-        return self::instance();
+        die;
     }
 
     // 根据模式报错
     static function end($msg)
     {
-        T_S ? Csn::show($msg)->E() : Csn::close('页面不存在')->E();
+        T_S ? Csn::show($msg) : Csn::close('页面不存在');
     }
 
-    // 结束程序
-    function E()
-    {
-        die;
-    }
-
-    // ----------------------------------------------------------------------
-    //  实例
-    // ----------------------------------------------------------------------
-
-    protected function __construct()
-    {
-    }
-
-    private static $instance;
-
-    private static function instance()
-    {
-        return is_null(self::$instance) ? self::$instance = new self() : self::$instance;
-    }
 }

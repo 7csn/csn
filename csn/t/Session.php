@@ -16,8 +16,8 @@ class Session extends Instance
                 ini_set('session.save_handler', 'memcache');
                 ini_set('session.save_path', 'tcp://' . join(';tcp://', Config::data('memcache.nodes')));
             } else {
-                File::mkDir(RUN_S);
-                ini_set('session.save_path', RUN_S);
+                File::mkDir(RUN_SESSION);
+                ini_set('session.save_path', RUN_SESSION);
             }
             foreach ($session['cookie'] as $set => $val) {
                 ini_set('session.' . $set, $val);

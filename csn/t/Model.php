@@ -2,39 +2,51 @@
 
 namespace csn;
 
-class Model extends Data
+class Model extends DbBase
 {
 
     // ----------------------------------------------------------------------
     //  随机主从数据库地址
     // ----------------------------------------------------------------------
 
-    // 获取写数据地址库组
-    protected static function writes()
-    {
-        if (is_null(DbInfo::$ws)) {
-            list(DbInfo::$ws, DbInfo::$ms) = MS::init(Config::data('model.nodes'));
-        }
-        return DbInfo::$ws;
-    }
+    // 写数据库地址数组
+    private static $ws;
 
-    // 获取写数据库地址
-    protected static function master()
+    // 写读数据库地址关联数组
+    private static $ms;
+
+    // 获取写数据地址库组
+    final protected static function writes()
     {
-        return is_null(DbInfo::$master) ? DbInfo::$master = MS::rand(self::writes()) : DbInfo::$master;
+        if (is_null(self::$ws)) {
+            list(self::$ws, self::$ms) = MS::init(Config::data('model.nodes'));
+        }
+        return self::$ws;
     }
 
     // 获取读数据地址库组
-    protected static function reads()
+    final protected static function reads()
     {
-        is_null(DbInfo::$ms) && self::writes();
-        return DbInfo::$ms[self::master()];
+        is_null(self::$ms) && self::writes();
+        return self::$ms[self::master()];
     }
 
-    // 获取读数据库地址
-    protected static function slave()
+    // 写数据库地址
+    private static $master;
+
+    // 获取写数据库地址
+    final protected static function master()
     {
-        return is_null(DbInfo::$slave) ? DbInfo::$slave = MS::rand(self::reads()) : DbInfo::$slave;
+        return is_null(self::$master) ? self::$master = MS::rand(self::writes()) : self::$master;
+    }
+
+    // 读数据库地址
+    private static $slave;
+
+    // 获取读数据库地址
+    final protected static function slave()
+    {
+        return is_null(self::$slave) ? self::$slave = MS::rand(self::reads()) : self::$slave;
     }
 
     // ----------------------------------------------------------------------
@@ -42,7 +54,7 @@ class Model extends Data
     // ----------------------------------------------------------------------
 
     // 获取数据库相关信息
-    protected static function node($address)
+    final protected static function node($address)
     {
         $link = Config::data('model.link');
         if (key_exists($address, $link)) {
@@ -53,13 +65,13 @@ class Model extends Data
     }
 
     // 数据库连接
-    protected static function connect($address)
+    final protected static function connect($address)
     {
-        return key_exists($address, DbInfo::$links) ? DbInfo::$links[$address] : DbInfo::$links[$address] = call_user_func(function ($address) {
+        return key_exists($address, self::$links) ? self::$links[$address] : self::$links[$address] = call_user_func(function ($address) {
             list($host, $port) = explode(':', $address);
             $node = self::node($address);
             $link = new \PDO("mysql:host=$host;port=$port", $node['du'], $node['dp']);
-            DbInfo::$dbInfos[$address] = ['dbn' => $node['dbn'], 'dbn_now' => null];
+            self::$dbInfos[$address] = ['dbn' => $node['dbn'], 'dbn_now' => null];
             return $link;
         }, $address);
     }
@@ -69,14 +81,14 @@ class Model extends Data
     // ----------------------------------------------------------------------
 
     // SQL语句
-    protected static $sqls;
+    private static $sqls;
 
     // 查询
-    static function query($func, $rArr = false, $tbn = null)
+    final static function query($func, $rArr = false, $tbn = null)
     {
         $sqls = call_user_func($func, is_null($tbn) ? self::tbn() : $tbn);
         self::$sqls = $sqls;
-        $address = DbInfo::getTransaction() ? self::master() : self::slave();
+        $address = self::getTrans() ? self::master() : self::slave();
         $link = self::dbnConnect($address);
         if (is_array($sqls)) {
             $sth = $link->prepare($sqls[0]);
@@ -88,7 +100,7 @@ class Model extends Data
     }
 
     // 结果集
-    protected static function res(&$sth, $rArr = false)
+    final protected static function res(&$sth, $rArr = false)
     {
         $sth->setFetchMode($rArr ? \PDO::FETCH_ASSOC : \PDO::FETCH_OBJ);
         $res = [];
@@ -100,7 +112,7 @@ class Model extends Data
     }
 
     // 修改
-    static function execute($func)
+    final static function execute($func)
     {
         $sqls = call_user_func($func, self::tbn());
         $link = self::dbnConnect(self::master());
@@ -109,7 +121,7 @@ class Model extends Data
     }
 
     // 获取SQL语句
-    static function sqls()
+    final static function sqls()
     {
         return self::$sqls;
     }
@@ -118,26 +130,26 @@ class Model extends Data
     //  库、表、字段信息
     // ----------------------------------------------------------------------
 
-    protected static $tbn = false;         // 当前表名
-    protected static $dbn = false;         // 当前库名
+    private static $tbn = false;         // 当前表名
+    private static $dbn = false;         // 当前库名
 
     // 数据库匹配;返回连接
-    protected static function dbnConnect($address)
+    final protected static function dbnConnect($address)
     {
         $link = self::connect($address);
-        $dbInfo = DbInfo::$dbInfos[$address];
+        $dbInfo = self::$dbInfos[$address];
         $dbn = self::$dbn ?: $dbInfo['dbn'];
         if ($dbn !== $dbInfo['dbn_now']) {
             in_array($dbn, self::dbns($link, $dbn)) ? $link->query(" USE `$dbn` ") : Csn::end('服务器 ' . $address . ' 不存在数据库 ' . $dbn);
-            DbInfo::$dbInfos[$address]['db_now'] = $dbn;
+            self::$dbInfos[$address]['db_now'] = $dbn;
         }
         return $link;
     }
 
     // 获取数据库列表
-    protected static function dbns($link, $address)
+    final protected static function dbns($link, $address)
     {
-        return key_exists($address, DbInfo::$dbns) ? DbInfo::$dbns[$address] : DbInfo::$dbns[$address] = call_user_func(function ($link) {
+        return key_exists($address, self::$dbns) ? self::$dbns[$address] : self::$dbns[$address] = call_user_func(function ($link) {
             $sth = $link->query(" SHOW DATABASES ");
             $dbns = [];
             foreach (self::res($sth) as $v) {
@@ -148,7 +160,7 @@ class Model extends Data
     }
 
     // 库名及表名初始化
-    protected static function names()
+    final protected static function names()
     {
         $class = get_called_class();
         $class::$tbn || call_user_func(function ($class) {
@@ -169,25 +181,25 @@ class Model extends Data
     }
 
     // 获取表名
-    protected static function tbn()
+    final protected static function tbn()
     {
         $class = self::names();
         return $class::$tbn;
     }
 
     // 获取/设置库名
-    static function dbn($dbn = null)
+    final static function dbn($dbn = null)
     {
         $class = self::names();
         return is_null($dbn) ? $class::$dbn : $class::$dbn = $dbn;
     }
 
     // 查询表结构;参数为关联表名
-    protected static function desc($tbn = null)
+    final protected static function desc($tbn = null)
     {
         is_null($tbn) && $tbn = self::tbn();
         $key = self::dbn() . '@' . $tbn;
-        return key_exists($key, DbInfo::$descs) ? DbInfo::$descs[$key] : DbInfo::$descs[$key] = call_user_func(function ($tbn) {
+        return key_exists($key, self::$descs) ? self::$descs[$key] : self::$descs[$key] = call_user_func(function ($tbn) {
             $desc = new \stdClass();
             $desc->list = new \stdClass();
             $desc->primaryKey = null;
@@ -205,14 +217,14 @@ class Model extends Data
     }
 
     // 查询字段结构
-    protected static function fieldStructure($field)
+    final protected static function fieldStructure($field)
     {
         $desc = self::desc();
         return key_exists($field, $desc) ? $desc[$field] : null;
     }
 
     // 字段值处理
-    protected static function parseValue($structure, $val = null)
+    final protected static function parseValue($structure, $val = null)
     {
         switch (explode('(', $structure->Type)[0]) {
             case 'char':
@@ -234,7 +246,7 @@ class Model extends Data
     }
 
     // 主键及对象锁定
-    protected static function primaryKey($id)
+    final protected static function primaryKey($id)
     {
         $desc = self::desc();
         $primaryKey = $desc->primaryKey;
@@ -246,7 +258,7 @@ class Model extends Data
     // ----------------------------------------------------------------------
 
     // 重置表结构
-    static function truncate()
+    final static function truncate()
     {
         return self::execute(function ($tbn) {
             return " TRUNCATE TABLE `$tbn` ";
@@ -254,7 +266,7 @@ class Model extends Data
     }
 
     // 查询全部行
-    static function all($field = '*', $rArr = false)
+    final static function all($field = '*', $rArr = false)
     {
         return self::query(function ($tbn) use ($field) {
             $fields = is_array($field) ? '`' . implode('`,`', $field) . '`' : $field;
@@ -263,7 +275,7 @@ class Model extends Data
     }
 
     // 删除指定行
-    static function destroy($id)
+    final static function destroy($id)
     {
         list($primaryKey, $id) = self::primaryKey($id);
         return self::execute(function ($tbn) use ($primaryKey, $id) {
@@ -272,14 +284,14 @@ class Model extends Data
     }
 
     // 事务
-    static function transaction($func)
+    final static function transaction($func)
     {
         $link = self::connect(self::master());
         $link->beginTransaction();
-        DbInfo::setTransaction(true);
+        self::setTrans(true);
         echo '1111111';
         $link->{($res = call_user_func($func, $link)) ? 'rollBack' : 'commit'}();
-        DbInfo::setTransaction();
+        self::setTrans();
         echo '2222222';
         return $res;
     }
@@ -289,12 +301,13 @@ class Model extends Data
     // ----------------------------------------------------------------------
 
     // 条件
-    static function which($where, $bind = null, $obj = null)
+    final static function which($where, $bind = null, $obj = null)
     {
         return (is_null($obj) || !($obj instanceof self)) ? new self($where, $bind) : $obj->where($where)->bind($bind);
     }
 
-    static function assign($id, $obj = null)
+    // 主键
+    final static function assign($id, $obj = null)
     {
         list($primaryKey, $id) = self::primaryKey($id);
         return self::which(" `$primaryKey` = :id ", [':id' => $id], $obj);
@@ -311,67 +324,67 @@ class Model extends Data
     }
 
     // 指定条件对象
-    protected function parse()
+    final protected function parse()
     {
         $this->parse = new Data();
         return $this;
     }
 
     // 表别名
-    function alias($alias)
+    final function alias($alias)
     {
         $this->parse->alias = $alias;
         return $this;
     }
 
     // 关联表
-    function join($join, $alias = null, $type = 'inner')
+    final function join($join, $alias = null, $type = 'inner')
     {
         is_null($this->parse->join) ? $this->parse->join = [[strtoupper($type), $join, $alias]] : $this->parse->join[] = [strtoupper($type), $join, $alias];
         return $this;
     }
 
     // 左关联
-    function leftJoin($join, $alias = null)
+    final function leftJoin($join, $alias = null)
     {
         return $this->join($join, $alias, 'left');
     }
 
     // 内联
-    function innerJoin($join, $alias = null)
+    final function innerJoin($join, $alias = null)
     {
         return $this->join($join, $alias, 'inner');
     }
 
     // 右关联
-    function rightJoin($join, $alias = null)
+    final function rightJoin($join, $alias = null)
     {
         return $this->join($join, $alias, 'right');
     }
 
     // 关联条件
-    function on($on)
+    final function on($on)
     {
         empty($on) || $this->parse->field = $on;
         return $this;
     }
 
     // 条件
-    function where($where, $bind = null)
+    final function where($where, $bind = null)
     {
         empty($where) || ($this->bind($bind)->parse->where = $where);
         return $this;
     }
 
     // 条件(进一步筛选)
-    function having($having, $bind = null)
+    final function having($having, $bind = null)
     {
         empty($having) || ($this->bind($bind)->parse->having = $having);
         return $this;
     }
 
     // 预编译
-    function bind($bind)
+    final function bind($bind)
     {
         empty($bind) || call_user_func(function ($obj, $bind) {
             $obj->parse->bind = is_null($b = $obj->parse->bind) ? $bind : array_merge($b, $bind);
@@ -380,28 +393,28 @@ class Model extends Data
     }
 
     // 字段
-    function field($field, $bind = null)
+    final function field($field, $bind = null)
     {
         empty($field) || ($this->bind($bind)->parse->field = $field);
         return $this;
     }
 
     // 归类
-    function group($group)
+    final function group($group)
     {
         $this->parse->group = $group;
         return $this;
     }
 
     // 顺序
-    function order($order)
+    final function order($order)
     {
         $this->parse->order = $order;
         return $this;
     }
 
     // 限制
-    function limit($from, $num = null)
+    final function limit($from, $num = null)
     {
         if (is_null($num)) {
             $num = $from;
@@ -416,7 +429,7 @@ class Model extends Data
     // ----------------------------------------------------------------------
 
     // 增
-    function insert($field = null)
+    final function insert($field = null)
     {
         $this->field($field);
         $tables = $this->parseTable();
@@ -438,7 +451,7 @@ class Model extends Data
     }
 
     // 删
-    function delete()
+    final function delete()
     {
         $sql = 'DELETE FROM' . $this->parseTable() . $this->parseSql('on') . $this->parseWhere() . $this->parseSql('group') . $this->parseSql('order') . $this->parseSql('limit');
         $bind = $this->parse->bind;
@@ -448,7 +461,7 @@ class Model extends Data
     }
 
     // 改
-    function update($field = null)
+    final function update($field = null)
     {
         $this->field($field);
         $bind = $this->parse->bind;
@@ -465,7 +478,7 @@ class Model extends Data
     }
 
     // 查多行
-    function select($type = \PDO::FETCH_OBJ)
+    final function select($type = \PDO::FETCH_OBJ)
     {
         $sql = 'SELECT' . $this->parseSql('field') . ' FROM' . $this->parseTable() . $this->parseSql('on') . $this->parseWhere() . $this->parseHaving() . $this->parseSql('group') . $this->parseSql('order') . $this->parseSql('limit');
         $bind = $this->parse->bind;
@@ -476,7 +489,7 @@ class Model extends Data
     }
 
     // 查单行
-    function find($type = \PDO::FETCH_OBJ)
+    final function find($type = \PDO::FETCH_OBJ)
     {
         $limit = $this->parse->limit;
         $this->parse->limit = is_null($limit) ? 1 : [$limit[0], 1];
@@ -486,7 +499,7 @@ class Model extends Data
     }
 
     // 查单字段值
-    function one($field = null)
+    final function one($field = null)
     {
         is_null($field) || $this->field($field);
         $find = $this->find(\PDO::FETCH_OBJ);
@@ -498,7 +511,7 @@ class Model extends Data
     // ----------------------------------------------------------------------
 
     // 收集表单数据
-    function create()
+    final function create()
     {
         $desc = self::desc();
         $primaryKey = $desc->primaryKey;
@@ -509,14 +522,14 @@ class Model extends Data
     }
 
     // 增加行
-    function add($data = null)
+    final function add($data = null)
     {
         is_null($data) && $data = $this->data;
         return $this->insert($data);
     }
 
     // 修改行
-    function save($id = null)
+    final function save($id = null)
     {
         is_null($id) || self::assign($id, $this);
         return $this->update($this->data);
@@ -527,7 +540,7 @@ class Model extends Data
     // ----------------------------------------------------------------------
 
     // 表处理
-    protected function parseTable()
+    final protected function parseTable()
     {
         $tbs = ' `' . self::tbn() . '`' . ($this->parse->alias ? " as `{$this->parse->alias}`" : '');
         $tbArr = [self::tbn()];
@@ -543,19 +556,19 @@ class Model extends Data
     }
 
     // 条件数组处理
-    protected function parseWhere()
+    final protected function parseWhere()
     {
         return ($where = $this->parse->where) ? ' WHERE ' . (is_array($where) ? implode(' ', $where) : $where) : '';
     }
 
     // 二次筛选条件数组处理
-    protected function parseHaving()
+    final protected function parseHaving()
     {
         return ($having = $this->parse->having) ? ' HAVING ' . (is_array($having) ? implode(' ', $having) : $having) : '';
     }
 
     // 字段数组处理
-    protected function parseField()
+    final protected function parseField()
     {
         // 获取所有表结构
         $tbInfos = [];
@@ -578,7 +591,7 @@ class Model extends Data
     }
 
     // 获取指定部分SQL语句
-    protected function parseSql($key)
+    final protected function parseSql($key)
     {
         $val = $this->parse->$key;
         if ($val) {

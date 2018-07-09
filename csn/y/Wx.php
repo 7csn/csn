@@ -85,7 +85,7 @@ class Wx
         }
         if ($data->expire_time < time()) {
             $url = "https://api.weixin.qq.com/cgi-bin/token?grant_type=client_credential&appid=" . self::get('APPID') . "&secret=" . self::get('APPSECRET');
-            $res = json_decode(\csn\Http::simple($url));
+            $res = json_decode(\csn\Curl::simple($url));
             $access_token = $res->access_token;
             if ($access_token) {
                 $data->expire_time = time() + 7000;

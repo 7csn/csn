@@ -2,12 +2,71 @@
 
 namespace csn;
 
-class Db
+final class Db extends DbBase
 {
+
+    // ----------------------------------------------------------------------
+    //  配置信息
+    // ----------------------------------------------------------------------
+
+    private static $config;
+
+    // ----------------------------------------------------------------------
+    //  单例
+    // ----------------------------------------------------------------------
+
+    private static $instance;
+
+    private static function instance()
+    {
+        if (is_null(self::$instance)) {
+            self::$instance = new self();
+            self::$config = Config::data('db');
+        }
+        return self::$instance;
+    }
+
+    // ----------------------------------------------------------------------
+    //  指定连接并返回对象
+    // ----------------------------------------------------------------------
+
+    static function link($key)
+    {
+        return self::instance()->connect($key);
+    }
+
+    // ----------------------------------------------------------------------
+    //  指定连接并返回对象
+    // ----------------------------------------------------------------------
+
+    // 当前连接定位
+    private static $key;
+
+    // 当前连接
+    private static $link;
+
+    // 获取连接
+    static function connect($key = 0)
+    {
+        self::$key === $key || call_user_func(function($key) {
+            key_exists($key, self::$dbs) || call_user_func(function($key) {
+                if (key_exists($key, self::$config)) {
+                    $con = self::$config[$key];
+                    $pdo = new \PDO("mysql:host={$con['dh']}", $con['du'], $con['dp']);
+                    $pdo->query('SET NAMES utf8');
+                    self::$arr[$key] = ['db' => $con['db'], '_db' => null, 'th' => $con['dth']];
+                    self::$dbs[$key] = $pdo;
+                    self::$key = $key;
+                } else {
+                    Csn::end('找不到数据库配置键' . $key);
+                }
+            }, $key);
+            self::$link = self::$dbs[$key];
+        }, $key);
+        return self::instance();
+    }
+
     static private $dbs = [];
-    static private $me;
-    static private $key;
-    static private $pdo;
     static private $arr = [];
     public $sql_arr = [];
     static public $sql;
@@ -29,7 +88,7 @@ class Db
             $values .= '(' . rtrim($value, ',') . '),';
         }
         $sql = 'INSERT INTO' . $this->parseTable() . ' (`' . implode('`,`', keys(current($fields))) . '`) VALUES ' . rtrim($values, ',');
-        $b = self::$pdo->prepare($sql)->execute($bind);
+        $b = self::$link->prepare($sql)->execute($bind);
         $this->backEnd($c ? false : [$sql, $bind]);
         return $b;
     }
@@ -47,7 +106,7 @@ class Db
         $this->where($w, $b);
         $sql = 'DELETE FROM' . $this->parseTable() . $this->parseWhere() . $this->makeSql('group') . $this->makeSql('order') . $this->makeSql('limit');
         $bind = $this->parseBind();
-        $b = empty($bind) ? self::$pdo->exec($sql) : self::$pdo->prepare($sql)->execute($bind);
+        $b = empty($bind) ? self::$link->exec($sql) : self::$link->prepare($sql)->execute($bind);
         $this->backEnd($c ? false : [$sql, $bind]);
         return $b;
     }
@@ -65,7 +124,7 @@ class Db
             $bind[$k . '__'] = is_array($v) ? serialize($v) : $v;
         }
         $sql = 'UPDATE' . $this->parseTable() . ' SET ' . implode(',', $set) . $this->parseWhere() . $this->makeSql('group') . $this->makeSql('order') . $this->makeSql('limit');
-        $b = self::$pdo->prepare($sql)->execute($bind);
+        $b = self::$link->prepare($sql)->execute($bind);
         $this->backEnd($c ? false : [$sql, $bind]);
         return $b;
     }
@@ -80,9 +139,9 @@ class Db
         $sql = 'SELECT' . $this->makeSql('field') . ' FROM' . $this->parseTable() . $this->parseWhere() . $this->makeSql('group') . $this->makeSql('order') . $this->makeSql('limit');
         $bind = $this->parseBind();
         if (empty($bind)) {
-            $sth = self::$pdo->query($sql);
+            $sth = self::$link->query($sql);
         } else {
-            $sth = self::$pdo->prepare($sql);
+            $sth = self::$link->prepare($sql);
             $sth->execute($bind);
         }
         $sth->setFetchMode($m);
@@ -123,7 +182,7 @@ class Db
             $close = $bind;
             $bind = [];
         }
-        $b = $bind ? self::$pdo->prepare($sql)->execute($bind) : self::$pdo->exec($sql);
+        $b = $bind ? self::$link->prepare($sql)->execute($bind) : self::$link->exec($sql);
         $close ? self::close() : self::$sql = $sql;
         return $b;
     }
@@ -136,9 +195,9 @@ class Db
             $bind = [];
         }
         if (empty($bind)) {
-            $sth = self::$pdo->query($sql);
+            $sth = self::$link->query($sql);
         } else {
-            $sth = self::$pdo->prepare($sql);
+            $sth = self::$link->prepare($sql);
             $sth->execute($bind);
         }
         $sth->setFetchMode(\PDO::FETCH_OBJ);
@@ -170,51 +229,16 @@ class Db
     // 事务处理
     function commit()
     {
-        $pdo = self::$pdo;
+        $pdo = self::$link;
         $pdo->beginTransaction();
-        DbInfo::setTransaction(true);
+        DbInfo::setTrans(true);
         $args = func_get_args();
         $fn = $args[0];
         $args[0] = $pdo;
         $b = call_user_func_array($fn, $args);
         $pdo->{$b ? 'rollBack' : 'commit'}();
-        DbInfo::setTransaction();
+        DbInfo::setTrans();
         return $b;
-    }
-
-    // 单例对象
-    static function me()
-    {
-        if (is_null(self::$me)) {
-            self::$me = new self();
-        }
-        return self::$me;
-    }
-
-    // 获取连接
-    static function connect($k = 0)
-    {
-        if (self::$key !== $k) {
-            if (!isset(self::$dbs[$k])) {
-                $db = Config::data('db');
-                if (key_exists($k, $db)) {
-                    $con = $db[$k];
-                    try {
-                        $pdo = new \PDO("mysql:host={$con['dh']}", $con['du'], $con['dp']);
-                        $pdo->query('SET NAMES utf8');
-                        self::$arr[$k] = ['db' => $con['db'], '_db' => null, 'th' => $con['dth']];
-                        self::$dbs[$k] = $pdo;
-                        self::$key = $k;
-                    } catch (\PDOException $e) {
-                        Csn::end('[PDO]：' . str_replace("\n", '', iconv("GB2312// IGNORE", "UTF-8", $e->getMessage())));
-                    }
-                } else {
-                    Csn::end('找不到数据库配置键' . $k);
-                }
-            }
-            self::$pdo = self::$dbs[$k];
-        }
-        return self::me();
     }
 
     // 指定数据库
@@ -226,7 +250,7 @@ class Db
         } else {
             self::$arr[self::$key]['_db'] = $db;
             self::$tbInfo[self::$key . '@' . $db] = [];
-            self::$pdo->query('use ' . $db);
+            self::$link->query('use ' . $db);
         }
         return $this;
     }
@@ -237,7 +261,7 @@ class Db
         if (is_null($th)) {
             $th = self::$arr[self::$key]['th'];
         }
-        self::$pdo->query('TRUNCATE TABLE ' . $th . $tb);
+        self::$link->query('TRUNCATE TABLE ' . $th . $tb);
         return $this;
     }
 
@@ -325,7 +349,7 @@ class Db
         $tbi = self::$tbInfo[$tbk];
         foreach ($this->tablePart() as $k => $v) {
             $tbn = is_int($k) ? "{$th}{$v}" : "{$v}{$k}";
-            key_exists($tbn, $tbi) || $tbInfo[] = self::$tbInfo[$tbk][$tbn] = self::$pdo->query(" SHOW COLUMNS FROM `$tbn` ")->fetchAll(\PDO::FETCH_ASSOC);
+            key_exists($tbn, $tbi) || $tbInfo[] = self::$tbInfo[$tbk][$tbn] = self::$link->query(" SHOW COLUMNS FROM `$tbn` ")->fetchAll(\PDO::FETCH_ASSOC);
         }
         $arr = [];
         $fd = $this->fieldPart();
@@ -411,7 +435,7 @@ class Db
     // 关闭当前连接
     static function close()
     {
-        self::$pdo = self::$dbs[self::$key] = self::$key = self::$sql = null;
+        self::$link = self::$dbs[self::$key] = self::$key = self::$sql = null;
     }
 
     // 关闭所有连接
