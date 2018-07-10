@@ -11,7 +11,7 @@ final class Runtime
 
     static function action()
     {
-        self::set('action', StdClass::instance(function () {
+        self::set('action', function () {
             $time = date('His');
             if (is_file($file = RUN . 'action' . DS . date('Ymd') . DS . Request::instance()->path() . '.json')) {
                 $action = json_decode(file_get_contents($file), true);
@@ -21,7 +21,7 @@ final class Runtime
                 $action = ['count' => 1, 'details' => [$time => 1]];
             }
             File::write($file, json_encode($action), true);
-        }));
+        });
     }
 
     // ----------------------------------------------------------------------
@@ -30,10 +30,10 @@ final class Runtime
 
     static function error($info)
     {
-        self::set('error', StdClass::instance(function ($info) {
+        self::set('error', call_user_func(function ($info) {
             list($date, $hour, $minute) = explode(' ', date('Ymd H i:s'));
             File::append(RUN . 'error' . DS . $date . DS . $hour . '.log', $minute . ' ' . $info . ENTER);
-        })->args($info));
+        }, $info));
     }
 
     // ----------------------------------------------------------------------
@@ -42,20 +42,20 @@ final class Runtime
 
     static function sql($info)
     {
-        self::set('sql', StdClass::instance(function ($info) {
+        self::set('sql', call_user_func(function ($info) {
             list($date, $hour, $minute) = explode(' ', date('Ymd H i:s'));
             File::append(RUN . 'sql' . DS . $date . DS . $hour . '.log', $minute . ' ' . $info . ENTER);
-        })->args($info));
+        }, $info));
     }
 
     // ----------------------------------------------------------------------
     //  记录日志记录模板
     // ----------------------------------------------------------------------
 
-    private static function set($type, $stdClass)
+    private static function set($type, $func)
     {
         if (Config::runtime($type . '.set')) {
-            $stdClass->run();
+            $func();
             $size = Config::runtime($type . '.size');
             is_int($size) && $size > 0 ? self::limit(RUN . $type . DS, $size) : Csn::end("日志项 $type 配置 size 不正确");
         }

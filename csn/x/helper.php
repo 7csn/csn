@@ -6,13 +6,13 @@ namespace app\c;
 //  Db对象：指定库名、链接
 // ----------------------------------------------------------------------
 
-function db($dbn = null, $key = 0)
+function db($dbn = '', $key = 0)
 {
-    if (func_num_args() < 2 && !is_null($dbn)) {
+    if (func_num_args() < 2 && $dbn !== '') {
         $key = $dbn;
-        $dbn = null;
+        $dbn = '';
     }
-    return \csn\Db::connect($key)->db($dbn);
+    return \csn\Db::link($key)->dbn($dbn);
 }
 
 // ----------------------------------------------------------------------
@@ -45,10 +45,9 @@ function system($name, $func = null, $args = []) {
 }
 
 // ----------------------------------------------------------------------
-//  生成登录ID
+//  模板引入方法
 // ----------------------------------------------------------------------
 
-// 模板引入方法
 function viewInclude($path, $data, $time)
 {
     $cache = cache($path, $time) ?: view($path, $data, $time)->getView();

@@ -76,7 +76,7 @@ final class View extends Instance
     //  获取静态内容
     // ----------------------------------------------------------------------
 
-    function makeHtml($stdClass, $time)
+    function makeHtml($func, $time)
     {
         return $this->htmlOK($time) ? file_get_contents($this->html) : call_user_func(function ($data) {
             ob_start();
@@ -86,7 +86,7 @@ final class View extends Instance
             ob_end_clean();
             File::write($this->html, $content, true);
             return $content;
-        }, $stdClass->run());
+        }, $func());
     }
 
     // ----------------------------------------------------------------------

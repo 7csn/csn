@@ -19,7 +19,7 @@ class Model extends DbBase
     final protected static function writes()
     {
         if (is_null(self::$ws)) {
-            list(self::$ws, self::$ms) = MS::init(Config::data('model.nodes'));
+            list(self::$ws, self::$ms) = MS::init(Config::data('dbs.model.nodes'));
         }
         return self::$ws;
     }
@@ -61,34 +61,22 @@ class Model extends DbBase
     {
         $sqls = call_user_func($func, is_null($tbn) ? self::tbn() : $tbn);
         self::$sqls = $sqls;
-        $address = self::getTrans() ? self::master() : self::slave();
-        $link = self::dbnConnect($address);
+        $link = self::db(self::getTrans() ? self::master() : self::slave(), self::dbn());
         if (is_array($sqls)) {
             $sth = $link->prepare($sqls[0]);
             $sth->execute($sqls[1]);
         } else {
             $sth = $link->query($sqls);
         }
+        return self::inQuery($link, $sql, $bind, $rArr);
         return self::res($sth, $rArr);
-    }
-
-    // 结果集
-    final protected static function res(&$sth, $rArr = false)
-    {
-        $sth->setFetchMode($rArr ? \PDO::FETCH_ASSOC : \PDO::FETCH_OBJ);
-        $res = [];
-        while ($v = $sth->fetch()) {
-            $res[] = $v;
-        }
-        $sth = null;
-        return $res;
     }
 
     // 修改
     final static function execute($func)
     {
         $sqls = call_user_func($func, self::tbn());
-        $link = self::dbnConnect(self::master());
+        $link = self::db(self::master(), self::dbn());
         self::$sqls = $sqls;
         return is_array($sqls) ? $link->prepare($sqls[0])->execute($sqls[1]) : $link->exec($sqls);
     }
@@ -105,32 +93,7 @@ class Model extends DbBase
 
     private static $tbn = false;         // 当前表名
     private static $dbn = false;         // 当前库名
-
-    // 数据库匹配;返回连接
-    final protected static function dbnConnect($address)
-    {
-        $link = self::connect($address);
-        $dbInfo = self::$dbInfos[$address];
-        $dbn = self::$dbn ?: $dbInfo['dbn'];
-        if ($dbn !== $dbInfo['dbn_now']) {
-            in_array($dbn, self::dbns($link, $dbn)) ? $link->query(" USE `$dbn` ") : Csn::end('服务器 ' . $address . ' 不存在数据库 ' . $dbn);
-            self::$dbInfos[$address]['db_now'] = $dbn;
-        }
-        return $link;
-    }
-
-    // 获取数据库列表
-    final protected static function dbns($link, $address)
-    {
-        return key_exists($address, self::$dbns) ? self::$dbns[$address] : self::$dbns[$address] = call_user_func(function ($link) {
-            $sth = $link->query(" SHOW DATABASES ");
-            $dbns = [];
-            foreach (self::res($sth) as $v) {
-                $dbns[] = $v->Database;
-            }
-            return $dbns;
-        }, $link);
-    }
+    private static $descs = [];           // 当前
 
     // 库名及表名初始化
     final protected static function names()
@@ -172,58 +135,7 @@ class Model extends DbBase
     {
         is_null($tbn) && $tbn = self::tbn();
         $key = self::dbn() . '@' . $tbn;
-        return key_exists($key, self::$descs) ? self::$descs[$key] : self::$descs[$key] = call_user_func(function ($tbn) {
-            $desc = new \stdClass();
-            $desc->list = new \stdClass();
-            $desc->primaryKey = null;
-            foreach (self::query(function ($tbn) {
-                return " DESC `$tbn` ";
-            }, false, $tbn) as $v) {
-                $v->Key === 'PRI' && $desc->primaryKey = $v->Field;
-                $desc->list->{$v->Field} = call_user_func(function ($row) {
-                    unset($row->Field);
-                    return $row;
-                }, $v);
-            }
-            return $desc;
-        }, $tbn);
-    }
-
-    // 查询字段结构
-    final protected static function fieldStructure($field)
-    {
-        $desc = self::desc();
-        return key_exists($field, $desc) ? $desc[$field] : null;
-    }
-
-    // 字段值处理
-    final protected static function parseValue($structure, $val = null)
-    {
-        switch (explode('(', $structure->Type)[0]) {
-            case 'char':
-            case 'varchar':
-            case 'tinytext':
-            case 'longtext':
-            case 'mediumtext':
-            case 'text':
-                is_null($val) ? '' : (string)$val;
-                break;
-            case 'int':
-                is_null($val) ? 0 : floatval($val);
-                break;
-            default:
-                is_null($val) ? 0 : floatval($val);
-                break;
-        }
-        return (!$val && !is_null($structure->Default)) ? $structure->Default : $val;
-    }
-
-    // 主键及对象锁定
-    final protected static function primaryKey($id)
-    {
-        $desc = self::desc();
-        $primaryKey = $desc->primaryKey;
-        return is_null($primaryKey) ? Csn::end((self::dbn() ? '库' . self::dbn() : '默认库') . '中表' . self::tbn() . '主键不存在') : [$primaryKey, self::parseValue($desc->list->$primaryKey, $id)];
+        return key_exists($key, self::$descs) ? self::$descs[$key] : self::$descs[$key] = parent::desc(self::slave(), self::dbn(), $tbn);
     }
 
     // ----------------------------------------------------------------------
@@ -259,7 +171,7 @@ class Model extends DbBase
     // 事务
     final static function transaction($func)
     {
-        $link = self::connect(self::master());
+        $link = self::linkInfo(self::master());
         $link->beginTransaction();
         self::setTrans(true);
         echo '1111111';
@@ -293,108 +205,7 @@ class Model extends DbBase
     // 创建对象
     function __construct($where = null, $bind = null)
     {
-        $this->parse()->where($where)->bind($bind);
-    }
-
-    // 指定条件对象
-    final protected function parse()
-    {
-        $this->parse = new Data();
-        return $this;
-    }
-
-    // 表别名
-    final function alias($alias)
-    {
-        $this->parse->alias = $alias;
-        return $this;
-    }
-
-    // 关联表
-    final function join($join, $alias = null, $type = 'inner')
-    {
-        is_null($this->parse->join) ? $this->parse->join = [[strtoupper($type), $join, $alias]] : $this->parse->join[] = [strtoupper($type), $join, $alias];
-        return $this;
-    }
-
-    // 左关联
-    final function leftJoin($join, $alias = null)
-    {
-        return $this->join($join, $alias, 'left');
-    }
-
-    // 内联
-    final function innerJoin($join, $alias = null)
-    {
-        return $this->join($join, $alias, 'inner');
-    }
-
-    // 右关联
-    final function rightJoin($join, $alias = null)
-    {
-        return $this->join($join, $alias, 'right');
-    }
-
-    // 关联条件
-    final function on($on)
-    {
-        empty($on) || $this->parse->field = $on;
-        return $this;
-    }
-
-    // 条件
-    final function where($where, $bind = null)
-    {
-        empty($where) || ($this->bind($bind)->parse->where = $where);
-        return $this;
-    }
-
-    // 条件(进一步筛选)
-    final function having($having, $bind = null)
-    {
-        empty($having) || ($this->bind($bind)->parse->having = $having);
-        return $this;
-    }
-
-    // 预编译
-    final function bind($bind)
-    {
-        empty($bind) || call_user_func(function ($obj, $bind) {
-            $obj->parse->bind = is_null($b = $obj->parse->bind) ? $bind : array_merge($b, $bind);
-        }, $this, $bind);
-        return $this;
-    }
-
-    // 字段
-    final function field($field, $bind = null)
-    {
-        empty($field) || ($this->bind($bind)->parse->field = $field);
-        return $this;
-    }
-
-    // 归类
-    final function group($group)
-    {
-        $this->parse->group = $group;
-        return $this;
-    }
-
-    // 顺序
-    final function order($order)
-    {
-        $this->parse->order = $order;
-        return $this;
-    }
-
-    // 限制
-    final function limit($from, $num = null)
-    {
-        if (is_null($num)) {
-            $num = $from;
-            $from = 0;
-        }
-        $this->parse->limit = [$from, $num];
-        return $this;
+        $this->component()->where($where)->bind($bind)->table(self::tbn());
     }
 
     // ----------------------------------------------------------------------
@@ -404,20 +215,7 @@ class Model extends DbBase
     // 增
     final function insert($field = null)
     {
-        $this->field($field);
-        $tables = $this->parseTable();
-        $fields = $this->parseField();
-        $values = '';
-        $bind = [];
-        foreach ($fields as $k => $v) {
-            $value = '';
-            foreach ($v as $kk => $vv) {
-                $value .= ':' . $kk . '__' . $k . ',';
-                $bind[$kk . '__' . $k] = is_array($vv) ? serialize($vv) : $vv;
-            }
-            $values .= '(' . rtrim($value, ',') . '),';
-        }
-        $sql = 'INSERT INTO' . $tables . ' (`' . implode('`,`', array_keys($fields[0])) . '`) VALUES ' . rtrim($values, ',');
+        list($sql, $bind) = $this->insertSql($field);
         return self::execute(function () use ($sql, $bind) {
             return is_null($bind) ? $sql : [$sql, $bind];
         });
@@ -426,8 +224,7 @@ class Model extends DbBase
     // 删
     final function delete()
     {
-        $sql = 'DELETE FROM' . $this->parseTable() . $this->parseSql('on') . $this->parseWhere() . $this->parseSql('group') . $this->parseSql('order') . $this->parseSql('limit');
-        $bind = $this->parse->bind;
+        list($sql, $bind) = $this->deleteSql();
         return self::execute(function () use ($sql, $bind) {
             return is_null($bind) ? $sql : [$sql, $bind];
         });
@@ -436,38 +233,29 @@ class Model extends DbBase
     // 改
     final function update($field = null)
     {
-        $this->field($field);
-        $bind = $this->parse->bind;
-        $set = [];
-        $tables = $this->parseTable();
-        foreach (current($this->parseField()) as $k => $v) {
-            $set[] = $k . ' = :' . $k . '__';
-            $bind[$k . '__'] = is_array($v) ? serialize($v) : $v;
-        }
-        $sql = 'UPDATE' . $tables . $this->parseSql('on') . ' SET ' . implode(',', $set) . $this->parseWhere() . $this->parseSql('group') . $this->parseSql('order') . $this->parseSql('limit');
+        list($sql, $bind) = $this->updateSql($field);
         return self::execute(function () use ($sql, $bind) {
             return is_null($bind) ? $sql : [$sql, $bind];
         });
     }
 
     // 查多行
-    final function select($type = \PDO::FETCH_OBJ)
+    final function select($rArr = false)
     {
-        $sql = 'SELECT' . $this->parseSql('field') . ' FROM' . $this->parseTable() . $this->parseSql('on') . $this->parseWhere() . $this->parseHaving() . $this->parseSql('group') . $this->parseSql('order') . $this->parseSql('limit');
-        $bind = $this->parse->bind;
+        list($sql, $bind) = $this->updateSql();
         $arr = self::query(function () use ($sql, $bind) {
             return is_null($bind) ? $sql : [$sql, $bind];
-        }, $type);
+        }, $rArr);
         return $arr;
     }
 
     // 查单行
-    final function find($type = \PDO::FETCH_OBJ)
+    final function find($rArr = false)
     {
-        $limit = $this->parse->limit;
-        $this->parse->limit = is_null($limit) ? 1 : [$limit[0], 1];
+        $limit = $this->components->limit;
+        $this->components->limit = is_null($limit) ? 1 : [$limit[0], 1];
         $rm = new \ReflectionMethod($this, 'select');
-        $res = $rm->invokeArgs($this, func_get_args());
+        $res = $rm->invokeArgs($this, [$rArr]);
         return current($res) ?: [];
     }
 
@@ -506,91 +294,6 @@ class Model extends DbBase
     {
         is_null($id) || self::assign($id, $this);
         return $this->update($this->data);
-    }
-
-    // ----------------------------------------------------------------------
-    //  指定条件对象处理
-    // ----------------------------------------------------------------------
-
-    // 表处理
-    final protected function parseTable()
-    {
-        $tbs = ' `' . self::tbn() . '`' . ($this->parse->alias ? " as `{$this->parse->alias}`" : '');
-        $tbArr = [self::tbn()];
-        $joins = $this->parse->join;
-        if (is_array($joins)) {
-            foreach ($joins as $join) {
-                $tbs .= " {$join[0]} JOIN `{$join[1]}`" . (is_null($join[2]) ? '' : " as `{$join[2]}`");
-                $tbArr[] = $join[1];
-            }
-        }
-        $this->parse->table = $tbArr;
-        return $tbs;
-    }
-
-    // 条件数组处理
-    final protected function parseWhere()
-    {
-        return ($where = $this->parse->where) ? ' WHERE ' . (is_array($where) ? implode(' ', $where) : $where) : '';
-    }
-
-    // 二次筛选条件数组处理
-    final protected function parseHaving()
-    {
-        return ($having = $this->parse->having) ? ' HAVING ' . (is_array($having) ? implode(' ', $having) : $having) : '';
-    }
-
-    // 字段数组处理
-    final protected function parseField()
-    {
-        // 获取所有表结构
-        $tbInfos = [];
-        foreach ($this->parse->table as $v) {
-            $tbInfos[] = self::desc($v);
-        }
-        // 二维字段数组
-        $fieldArr = [];
-        $fields = is_array(current($field = $this->parse->field)) ? $field : [$field];
-        foreach ($fields as $field) {
-            $arr = [];
-            foreach ($tbInfos as $tbInfo) {
-                foreach ($tbInfo->list as $k => $v) {
-                    $v->Extra === 'auto_increment' || key_exists($k, $field) && $arr[$k] = self::parseValue($v, $field[$k]);
-                }
-            }
-            $fieldArr[] = $arr;
-        }
-        return $fieldArr;
-    }
-
-    // 获取指定部分SQL语句
-    final protected function parseSql($key)
-    {
-        $val = $this->parse->$key;
-        if ($val) {
-            switch ($key) {
-                case 'on':
-                    $i = 'ON ';
-                    break;
-                case 'field':
-                    $i = '';
-                    break;
-                case 'group':
-                    $i = 'GROUP BY ';
-                    break;
-                case 'order':
-                    $i = 'ORDER BY ';
-                    break;
-                case 'limit':
-                    $i = 'LIMIT ';
-                    break;
-                default:
-                    return '';
-            }
-            return ' ' . $i . (is_array($val) ? implode(',', $val) : $val);
-        } else {
-            return $key === 'field' ? ' *' : '';
-        }
     }
 
 }
