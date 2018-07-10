@@ -214,9 +214,8 @@ class DbBase extends Data
     // ----------------------------------------------------------------------
 
     // 指定表
-    function table($table, $th = null)
+    final function tb($table, $th)
     {
-        is_null($th) && $th = self::dth($this->address);
         $this->components->table = $th . $table;
         return $this;
     }
@@ -316,10 +315,9 @@ class DbBase extends Data
     }
 
     // ----------------------------------------------------------------------
-    //  获取SQL
+    //  获取SQL：增、删、改、查
     // ----------------------------------------------------------------------
 
-    // 增
     final function insertSql($field = null)
     {
         $this->field($field);
@@ -339,14 +337,12 @@ class DbBase extends Data
         return [$sql, $bind];
     }
 
-    // 删
     final function deleteSql()
     {
         $sql = 'DELETE FROM' . $this->parseTable() . $this->parseSql('on') . $this->parseWhere() . $this->parseSql('group') . $this->parseSql('order') . $this->parseSql('limit');
         return [$sql, $this->components->bind];
     }
 
-    // 改
     final function updateSql($field = null)
     {
         $this->field($field);
@@ -361,10 +357,10 @@ class DbBase extends Data
         return [$sql, $bind];
     }
 
-    // 查
     final function selectSql()
     {
         $sql = 'SELECT' . $this->parseSql('field') . ' FROM' . $this->parseTable() . $this->parseSql('on') . $this->parseWhere() . $this->parseHaving() . $this->parseSql('group') . $this->parseSql('order') . $this->parseSql('limit');
+        Csn::dump($this);
         return [$sql, $this->components->bind];
     }
 

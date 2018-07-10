@@ -60,25 +60,26 @@ class Model extends DbBase
     final static function query($func, $rArr = false, $tbn = null)
     {
         $sqls = call_user_func($func, is_null($tbn) ? self::tbn() : $tbn);
-        self::$sqls = $sqls;
-        $link = self::db(self::getTrans() ? self::master() : self::slave(), self::dbn());
         if (is_array($sqls)) {
-            $sth = $link->prepare($sqls[0]);
-            $sth->execute($sqls[1]);
+            list($sql, $bind) = $sqls;
         } else {
-            $sth = $link->query($sqls);
+            $sql = $sqls;
+            $bind = [];
         }
-        return self::inQuery($link, $sql, $bind, $rArr);
-        return self::res($sth, $rArr);
+        return self::inQuery(self::db(self::getTrans() ? self::master() : self::slave(), self::dbn()), $sql, $bind, $rArr);
     }
 
     // 修改
     final static function execute($func)
     {
         $sqls = call_user_func($func, self::tbn());
-        $link = self::db(self::master(), self::dbn());
-        self::$sqls = $sqls;
-        return is_array($sqls) ? $link->prepare($sqls[0])->execute($sqls[1]) : $link->exec($sqls);
+        if (is_array($sqls)) {
+            list($sql, $bind) = $sqls;
+        } else {
+            $sql = $sqls;
+            $bind = [];
+        }
+        return self::modify(self::db(self::master(), self::dbn()), $sql, $bind);
     }
 
     // 获取SQL语句
@@ -93,25 +94,20 @@ class Model extends DbBase
 
     private static $tbn = false;         // 当前表名
     private static $dbn = false;         // 当前库名
-    private static $descs = [];           // 当前
+    private static $descs = [];           // 表结构数组
 
     // 库名及表名初始化
     final protected static function names()
     {
         $class = get_called_class();
         $class::$tbn || call_user_func(function ($class) {
-            if (strpos($class, 'app\\m\\') === 0) {
-                $arr = array_reverse(explode('\\', substr($class, 6)));
-                $count = count($arr);
-                if ($count === 0) {
-                    Csn::end('数据库模型' . $class . '异常');
-                } else {
-                    $class::$tbn = strtolower($arr[0]);
-                    $class::$dbn = key_exists(1, $arr) ? strtolower($arr[1]) : false;
-                }
-            } else {
-                Csn::end('数据库模型' . $class . '异常');
-            }
+            strpos($class, 'app\\m\\') === 0 || Csn::end('数据库模型' . $class . '异常');
+            $arr = array_reverse(explode('\\', substr($class, 6)));
+            $count = count($arr);
+            $count === 0 && Csn::end('数据库模型' . $class . '异常');
+            $class::$tbn = strtolower($arr[0]);
+            $class::$dbn = key_exists(1, $arr) ? strtolower($arr[1]) : false;
+            Csn::dump($class);
         }, $class);
         return $class;
     }
@@ -130,7 +126,7 @@ class Model extends DbBase
         return is_null($dbn) ? $class::$dbn : $class::$dbn = $dbn;
     }
 
-    // 查询表结构;参数为关联表名
+    // 查询表结构
     final protected static function desc($tbn = null)
     {
         is_null($tbn) && $tbn = self::tbn();
@@ -205,7 +201,19 @@ class Model extends DbBase
     // 创建对象
     function __construct($where = null, $bind = null)
     {
-        $this->component()->where($where)->bind($bind)->table(self::tbn());
+        Csn::dump('bbbbbbbb');
+//        $this->component()->where($where)->bind($bind)->table(self::tbn());
+    }
+
+    // ----------------------------------------------------------------------
+    //  指定表
+    // ----------------------------------------------------------------------
+
+    function table($table)
+    {
+        $th = self::dth(self::slave());
+        return $this->tb($table, $th);
+        return $this;
     }
 
     // ----------------------------------------------------------------------
