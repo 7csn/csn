@@ -211,7 +211,7 @@ class DbBase extends Data
     final function position($address, $dbn)
     {
         $this->components->address = $address;
-        $this->components->dbn = $dbn;
+        $this->components->dbn = $dbn ?: self::dn($address);
         return $this;
     }
 
@@ -353,8 +353,9 @@ class DbBase extends Data
         $set = [];
         $tables = $this->parseTable();
         foreach (current($this->parseField()) as $k => $v) {
-            $set[] = "$k = :{$k}__";
-            $bind[":{$k}__"] = is_array($v) ? serialize($v) : $v;
+            $lock = join('__', array_reverse(explode('.', $k)));
+            $set[] = "$k = :{$lock}__";
+            $bind[":{$lock}__"] = is_array($v) ? serialize($v) : $v;
         }
         $sql = 'UPDATE' . $tables . $this->parseSql('on') . ' SET ' . $this->unquote(implode(',', $set)) . $this->parseWhere() . $this->parseSql('group') . $this->parseSql('order') . $this->parseSql('limit');
         return [$sql, $bind];
@@ -403,8 +404,14 @@ class DbBase extends Data
             foreach ($tbInfos as $alias => $tbInfo) {
                 foreach ($tbInfo->list as $k => $v) {
                     if ($v->Extra === 'auto_increment') continue;
-                    $key = $alias . '.' . $k;
-                    key_exists($key, $field) && $arr[$key] = self::parseValue($v, $field[$key]);
+                    if (key_exists($k, $field)) {
+                        $arr[$k] = self::parseValue($v, $field[$k]);
+                    } else {
+                        $key = $alias . '.' . $k;
+                        if (key_exists($key, $field)) {
+                            $arr[$key] = self::parseValue($v, $field[$key]);
+                        }
+                    }
                 }
             }
             $fieldArr[] = $arr;

@@ -50,15 +50,6 @@ class Model extends DbBase
     }
 
     // ----------------------------------------------------------------------
-    //  获取当前数据库地址
-    // ----------------------------------------------------------------------
-
-    final protected static function address()
-    {
-//        return
-    }
-
-    // ----------------------------------------------------------------------
     //  表SQL封装
     // ----------------------------------------------------------------------
 
@@ -104,7 +95,6 @@ class Model extends DbBase
     protected static $tbn;                  // 当前表名
     protected static $dbn;                  // 当前库名
     protected static $dth;                  // 当前表前缀
-    private static $descs = [];             // 表结构数组
 
     // 库名、表名、表前缀初始化
     final protected static function names()
@@ -115,7 +105,7 @@ class Model extends DbBase
             $arr = array_reverse(explode('\\', substr($class, 6)));
             $count = count($arr);
             $count === 0 && Csn::end('数据库模型' . $class . '异常');
-            $class::$dbn = key_exists(1, $arr) ? strtolower($arr[1]) : false;
+            $class::$dbn = key_exists(1, $arr) ? strtolower($arr[1]) : self::dn(self::slave());
             is_null($class::$dth) && ($class::$dth = self::dth(self::slave()));
             $class::$tbn = $class::$dth . strtolower($arr[0]);
         }, $class);
@@ -129,20 +119,19 @@ class Model extends DbBase
         return $class::$tbn;
     }
 
+    // 获取表前缀
+    final protected static function th()
+    {
+        $class = self::names();
+        return $class::$dth;
+    }
+
     // 获取/设置库名
     final static function dbn($dbn = null)
     {
         $class = self::names();
         return is_null($dbn) ? $class::$dbn : $class::$dbn = $dbn;
     }
-
-    // 查询表结构
-//    final protected static function desc($tbn = null)
-//    {
-//        is_null($tbn) && $tbn = self::tbn();
-//        $key = self::dbn() . '@' . $tbn;
-//        return key_exists($key, self::$descs) ? self::$descs[$key] : self::$descs[$key] = parent::desc(self::slave(), self::dbn(), $tbn);
-//    }
 
     // ----------------------------------------------------------------------
     //  表操作(类)
@@ -211,16 +200,16 @@ class Model extends DbBase
     // 创建对象
     function __construct($where = null, $bind = null)
     {
-        $this->component()->where($where)->bind($bind)->table(self::tbn());
+        $this->component()->where($where)->bind($bind);
     }
 
     // ----------------------------------------------------------------------
     //  指定表
     // ----------------------------------------------------------------------
 
-    function table($table)
+    function table($table, $address)
     {
-        return $this->tb($table, self::dth(self::slave()));
+        return $this->tb($table, self::dth($address))->position($address, self::th());
         return $this;
     }
 
@@ -231,7 +220,7 @@ class Model extends DbBase
     // 增
     final function insert($field = null)
     {
-        list($sql, $bind) = $this->insertSql($field);
+        list($sql, $bind) = $this->table(self::tbn(), self::master())->insertSql($field);
         return self::execute(function () use ($sql, $bind) {
             return is_null($bind) ? $sql : [$sql, $bind];
         });
@@ -240,7 +229,7 @@ class Model extends DbBase
     // 删
     final function delete()
     {
-        list($sql, $bind) = $this->deleteSql();
+        list($sql, $bind) = $this->table(self::tbn(), self::master())->deleteSql();
         return self::execute(function () use ($sql, $bind) {
             return is_null($bind) ? $sql : [$sql, $bind];
         });
@@ -249,7 +238,7 @@ class Model extends DbBase
     // 改
     final function update($field = null)
     {
-        list($sql, $bind) = $this->updateSql($field);
+        list($sql, $bind) = $this->table(self::tbn(), self::master())->updateSql($field);
         return self::execute(function () use ($sql, $bind) {
             return is_null($bind) ? $sql : [$sql, $bind];
         });
@@ -258,7 +247,7 @@ class Model extends DbBase
     // 查多行
     final function select($rArr = false)
     {
-        list($sql, $bind) = $this->updateSql();
+        list($sql, $bind) = $this->table(self::tbn(), self::getTrans() ? self::master() : self::slave())->updateSql();
         $arr = self::query(function () use ($sql, $bind) {
             return is_null($bind) ? $sql : [$sql, $bind];
         }, $rArr);
