@@ -78,6 +78,15 @@ class DbBase extends Data
     }
 
     // ----------------------------------------------------------------------
+    //  获取默认表名
+    // ----------------------------------------------------------------------
+
+    final protected static function dn($address)
+    {
+        return self::node($address)['dbn'];
+    }
+
+    // ----------------------------------------------------------------------
     //  表结构
     // ----------------------------------------------------------------------
 
@@ -89,7 +98,7 @@ class DbBase extends Data
             $desc = new \stdClass();
             $desc->list = new \stdClass();
             $desc->primaryKey = null;
-            foreach (self::inQuery(self::db($address, $dbn), " DESC `$tbn` ", false) as $v) {
+            foreach (self::inQuery(self::db($address, $dbn), " DESC `$tbn` ") as $v) {
                 $v->Key === 'PRI' && $desc->primaryKey = $v->Field;
                 $desc->list->{$v->Field} = call_user_func(function ($row) {
                     unset($row->Field);
@@ -197,6 +206,14 @@ class DbBase extends Data
     // ----------------------------------------------------------------------
     //  SQL因素
     // ----------------------------------------------------------------------
+
+    // 指定地址及库
+    final function position($address, $dbn)
+    {
+        $this->components->address = $address;
+        $this->components->dbn = $dbn;
+        return $this;
+    }
 
     // 指定表
     final function tb($table, $dth = '')
@@ -336,10 +353,10 @@ class DbBase extends Data
         $set = [];
         $tables = $this->parseTable();
         foreach (current($this->parseField()) as $k => $v) {
-            $set[] = $k . ' = :' . $k . '__';
-            $bind[$k . '__'] = is_array($v) ? serialize($v) : $v;
+            $set[] = "$k = :{$k}__";
+            $bind[":{$k}__"] = is_array($v) ? serialize($v) : $v;
         }
-        $sql = 'UPDATE' . $tables . $this->parseSql('on') . ' SET ' . implode(',', $set) . $this->parseWhere() . $this->parseSql('group') . $this->parseSql('order') . $this->parseSql('limit');
+        $sql = 'UPDATE' . $tables . $this->parseSql('on') . ' SET ' . $this->unquote(implode(',', $set)) . $this->parseWhere() . $this->parseSql('group') . $this->parseSql('order') . $this->parseSql('limit');
         return [$sql, $bind];
     }
 
@@ -356,13 +373,13 @@ class DbBase extends Data
     // 表处理
     final protected function parseTable()
     {
-        $tbs = " `{$this->components->table}`" . ($this->components->alias ? " as `{$this->components->alias}`" : "");
-        $tbArr = [$this->components->table];
+        $tbs = " `{$this->components->table}`" . ($this->components->alias ? " AS `{$this->components->alias}`" : "");
+        $tbArr = [$this->components->table => $this->components->alias];
         $joins = $this->components->join;
         if (is_array($joins)) {
             foreach ($joins as $join) {
-                $tbs .= " {$join[0]} JOIN `{$join[1]}`" . (is_null($join[2]) ? '' : " as `{$join[2]}`");
-                $tbArr[] = $join[1];
+                $tbs .= " {$join[0]} JOIN `{$join[1]}`" . (is_null($join[2]) ? '' : " AS `{$join[2]}`");
+                $tbArr[$join[1]] = $join[2];
             }
         }
         $this->components->table = $tbArr;
@@ -372,19 +389,22 @@ class DbBase extends Data
     // 字段数组处理
     final protected function parseField()
     {
+        $tbArr = $this->components->table;
         // 获取所有表结构
         $tbInfos = [];
-        foreach ($this->components->table as $v) {
-            $tbInfos[] = self::describe($v);
+        foreach ($tbArr as $k => $v) {
+            $tbInfos[is_null($v) ? $k : $v] = self::describe($this->components->address, $this->components->dbn, $k);
         }
         // 二维字段数组
         $fieldArr = [];
         $fields = is_array(current($field = $this->components->field)) ? $field : [$field];
         foreach ($fields as $field) {
             $arr = [];
-            foreach ($tbInfos as $tbInfo) {
+            foreach ($tbInfos as $alias => $tbInfo) {
                 foreach ($tbInfo->list as $k => $v) {
-                    $v->Extra === 'auto_increment' || key_exists($k, $field) && $arr[$k] = self::parseValue($v, $field[$k]);
+                    if ($v->Extra === 'auto_increment') continue;
+                    $key = $alias . '.' . $k;
+                    key_exists($key, $field) && $arr[$key] = self::parseValue($v, $field[$key]);
                 }
             }
             $fieldArr[] = $arr;
@@ -437,8 +457,8 @@ class DbBase extends Data
     // SQL关键字辅助处理
     final protected function unquote($str)
     {
-        $str = preg_replace('/([a-zA-Z_]+)\.([a-zA-Z_]+)/', '`\1`.`\2`', $str);
-        $str = preg_replace('/([a-zA-Z_]+)\.\*/', '`\1`.*', $str);
+        $str = preg_replace('/(?<!\:)([a-zA-Z_]+)\.([a-zA-Z_]+)/', '`\1`.`\2`', $str);
+        $str = preg_replace('/(?<!\:)([a-zA-Z_]+)\.\*/', '`\1`.*', $str);
         return $str;
     }
 

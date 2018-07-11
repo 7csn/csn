@@ -50,6 +50,7 @@ final class Db extends DbBase
     function dbn($dbn)
     {
         $this->dbn = $dbn;
+
         return $this;
     }
 
@@ -61,7 +62,7 @@ final class Db extends DbBase
     {
         $dth = self::dth($this->address);
         $table = (is_null($th) ? $dth : $th) . $table;
-        return $this->tb($table, $dth);
+        return $this->tb($table, $dth)->position($this->address, $this->dbn);
     }
 
     // ----------------------------------------------------------------------
@@ -71,6 +72,7 @@ final class Db extends DbBase
     // 增删改
     function execute($sql, $bind = null)
     {
+        Csn::dump($this->address, $this->dbn);
         $bool = self::modify(self::db($this->address, $this->dbn), $sql, $bind);
         $this->components->clear();
         return $bool;
@@ -136,7 +138,7 @@ final class Db extends DbBase
     function update($field = null)
     {
         list($sql, $bind) = $this->updateSql($field);
-        Csn::dump($sql, $bind);
+//        Csn::dump($sql, $bind);
         return $this->execute($sql, $bind);
     }
 

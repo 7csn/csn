@@ -42,7 +42,7 @@ define('WEB', dirname(CSN) . DS);
 define('PUB', WEB . 'public' . DS);
 
 // ----------------------------------------------------------------------
-//  项目应用目录：根目录、模型、视图、控制器、配置
+//  项目应用目录：根目录、模型、视图、控制器、配置、会话(存文件有效)
 // ----------------------------------------------------------------------
 
 define('APP', WEB . 'application' . DS);
@@ -50,6 +50,7 @@ define('APP_MODEL', APP . 'models' . DS);
 define('APP_VIEW', APP . 'views' . DS);
 define('APP_CONTROLLER', APP . 'controllers' . DS);
 define('APP_CONFIG', APP . 'configs' . DS);
+define('APP_SESSION', APP . 'session' . DS);
 
 // ----------------------------------------------------------------------
 //  项目运行目录
@@ -58,17 +59,11 @@ define('APP_CONFIG', APP . 'configs' . DS);
 define('RUN', WEB . 'runtime' . DS);
 
 // ----------------------------------------------------------------------
-//  项目会话目录：存文件有效
-// ----------------------------------------------------------------------
-
-define('WEB_SESSION', WEB . 'session' . DS);
-
-// ----------------------------------------------------------------------
 //  项目编译目录：PHP、HTML
 // ----------------------------------------------------------------------
 
-define('WEB_COMPILE', RUN . 'php' . DS);
-define('WEB_STATIC', RUN . 'html' . DS);
+define('WEB_COMPILE', WEB . 'compile' . DS);
+define('WEB_STATIC', WEB . 'static' . DS);
 
 // ----------------------------------------------------------------------
 //  换行
