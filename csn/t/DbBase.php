@@ -32,11 +32,11 @@ class DbBase extends Data
     // 获取连接信息
     final protected static function linkInfo($address)
     {
-        return key_exists($address, self::$linkInfo) ? self::$linkInfo[$address] : self::$linkInfo[$address] = call_user_func(function ($address) {
+        return key_exists($address, self::$linkInfo) ? self::$linkInfo[$address] : self::$linkInfo[$address] = call_user_func(function () use ($address) {
             $node = self::node($address);
             list($host, $port) = explode(':', $address);
             return ['link' => new \PDO("mysql:host=$host;port=$port", $node['du'], $node['dp']), 'dbn' => $node['dbn'], 'dbnNow' => null];
-        }, $address);
+        });
     }
 
     // ----------------------------------------------------------------------
@@ -58,14 +58,13 @@ class DbBase extends Data
 
     final protected static function dbName($address)
     {
-        return key_exists($address, self::$dbNames) ? self::$dbNames[$address] : self::$dbNames[$address] = call_user_func(function ($address) {
-            $dbns = [];
-            $sth = self::linkInfo($address)['link']->query(" SHOW DATABASES ");
-            foreach (self::res($sth) as $v) {
-                $dbns[] = $v->Database;
+        return key_exists($address, self::$dbNames) ? self::$dbNames[$address] : self::$dbNames[$address] = call_user_func(function () use ($address) {
+            $dbNames = [];
+            foreach (self::inQuery(self::linkInfo($address)['link'], " SHOW DATABASES ") as $v) {
+                $dbNames[] = $v->Database;
             }
-            return $dbns;
-        }, $address);
+            return $dbNames;
+        });
     }
 
     // ----------------------------------------------------------------------
@@ -84,15 +83,13 @@ class DbBase extends Data
 
     private static $describe = [];
 
-    protected static function desc($address, $dbn, $tbn)
+    protected static function describe($address, $dbn, $tbn)
     {
-        return empty(self::$describe[$address][$dbn][$tbn]) ? self::$describe[$address][$dbn][$tbn] = call_user_func(function ($address, $dbn, $tbn) {
+        return empty(self::$describe[$address][$dbn][$tbn]) ? self::$describe[$address][$dbn][$tbn] = call_user_func(function () use ($address, $dbn, $tbn) {
             $desc = new \stdClass();
             $desc->list = new \stdClass();
             $desc->primaryKey = null;
-            foreach (self::inQuery(self::db($address, $dbn), function ($tbn) {
-                return " DESC `$tbn` ";
-            }, false, $tbn) as $v) {
+            foreach (self::inQuery(self::db($address, $dbn), " DESC `$tbn` ", false) as $v) {
                 $v->Key === 'PRI' && $desc->primaryKey = $v->Field;
                 $desc->list->{$v->Field} = call_user_func(function ($row) {
                     unset($row->Field);
@@ -100,34 +97,17 @@ class DbBase extends Data
                 }, $v);
             }
             return $desc;
-
-        }, $address, $dbn, $tbn) : self::$describe[$address][$dbn . '@' . $tbn];
+        }) : self::$describe[$address][$dbn][$tbn];
     }
 
     // ----------------------------------------------------------------------
-    //  表SQL封装
+    //  表SQL封装：查询、增删改
     // ----------------------------------------------------------------------
 
-    // 查询
     final protected static function inQuery($link, $sql, $bind = [], $rArr = false)
     {
         $sth = $link->prepare($sql);
         $sth->execute($bind);
-        return self::res($sth, $rArr);
-    }
-
-    // 修改
-    final protected static function modify($link, $sql, $bind = [])
-    {
-        return $link->prepare($sql)->execute($bind);
-    }
-
-    // ----------------------------------------------------------------------
-    //  结果集
-    // ----------------------------------------------------------------------
-
-    final protected static function res(&$sth, $rArr = false)
-    {
         $sth->setFetchMode($rArr ? \PDO::FETCH_ASSOC : \PDO::FETCH_OBJ);
         $res = [];
         while ($v = $sth->fetch()) {
@@ -137,6 +117,11 @@ class DbBase extends Data
         return $res;
     }
 
+    final protected static function modify($link, $sql, $bind = [])
+    {
+        return $link->prepare($sql)->execute($bind);
+    }
+
     // ----------------------------------------------------------------------
     //  表结构
     // ----------------------------------------------------------------------
@@ -144,7 +129,7 @@ class DbBase extends Data
     // 查询字段结构
     final protected static function fieldStructure($field)
     {
-        $desc = self::desc();
+        $desc = self::describe();
         return key_exists($field, $desc) ? $desc[$field] : null;
     }
 
@@ -173,7 +158,7 @@ class DbBase extends Data
     // 主键及对象锁定
     final protected static function primaryKey($id)
     {
-        $desc = self::desc();
+        $desc = self::describe();
         $primaryKey = $desc->primaryKey;
         return is_null($primaryKey) ? Csn::end((self::db() ? '库' . self::db() : '默认库') . '中表' . self::tbn() . '主键不存在') : [$primaryKey, self::parseValue($desc->list->$primaryKey, $id)];
     }
@@ -214,9 +199,10 @@ class DbBase extends Data
     // ----------------------------------------------------------------------
 
     // 指定表
-    final function tb($table, $th)
+    final function tb($table, $dth = '')
     {
-        $this->components->table = $th . $table;
+        $this->components->table = $table;
+        $this->components->dth = $dth;
         return $this;
     }
 
@@ -228,28 +214,30 @@ class DbBase extends Data
     }
 
     // 关联表
-    final function join($join, $alias = null, $type = 'inner')
+    final protected function join($table, $dth, $alias = null, $type)
     {
-        is_null($this->components->join) ? $this->components->join = [[strtoupper($type), $join, $alias]] : $this->components->join[] = [strtoupper($type), $join, $alias];
+        $table = (is_null($dth) ? $this->components->dth : $dth) . $table;
+        $join = [$type, $table, $alias];
+        is_null($this->components->join) ? $this->components->join = [$join] : $this->components->join[] = $join;
         return $this;
     }
 
     // 左关联
-    final function leftJoin($join, $alias = null)
+    final function leftJoin($table, $alias = null, $dth = null)
     {
-        return $this->join($join, $alias, 'left');
+        return $this->join($table, $dth, $alias, 'LEFT');
     }
 
     // 内联
-    final function innerJoin($join, $alias = null)
+    final function innerJoin($table, $alias = null, $dth = null)
     {
-        return $this->join($join, $alias, 'inner');
+        return $this->join($table, $dth, $alias, 'INNER');
     }
 
     // 右关联
-    final function rightJoin($join, $alias = null)
+    final function rightJoin($table, $alias = null, $dth = null)
     {
-        return $this->join($join, $alias, 'right');
+        return $this->join($table, $dth, $alias, 'RIGHT');
     }
 
     // 关联条件
@@ -276,9 +264,7 @@ class DbBase extends Data
     // 预编译
     final function bind($bind)
     {
-        empty($bind) || call_user_func(function ($obj, $bind) {
-            $obj->parse->bind = is_null($b = $obj->parse->bind) ? $bind : array_merge($b, $bind);
-        }, $this, $bind);
+        empty($bind) || $this->components->bind = is_null($b = $this->components->bind) ? $bind : array_merge($b, $bind);
         return $this;
     }
 
@@ -360,7 +346,6 @@ class DbBase extends Data
     final function selectSql()
     {
         $sql = 'SELECT' . $this->parseSql('field') . ' FROM' . $this->parseTable() . $this->parseSql('on') . $this->parseWhere() . $this->parseHaving() . $this->parseSql('group') . $this->parseSql('order') . $this->parseSql('limit');
-        Csn::dump($this);
         return [$sql, $this->components->bind];
     }
 
@@ -390,7 +375,7 @@ class DbBase extends Data
         // 获取所有表结构
         $tbInfos = [];
         foreach ($this->components->table as $v) {
-            $tbInfos[] = self::desc($v);
+            $tbInfos[] = self::describe($v);
         }
         // 二维字段数组
         $fieldArr = [];
@@ -410,7 +395,7 @@ class DbBase extends Data
     // 条件数组处理
     final protected function parseWhere()
     {
-        return ($where = $this->components->where) ? ' WHERE ' . (is_array($where) ? implode(' ', $where) : $where) : '';
+        return ($where = $this->components->where) ? ' WHERE ' . self::unquote(is_array($where) ? implode(' ', $where) : $where) : '';
     }
 
     // 二次筛选条件数组处理
@@ -420,11 +405,11 @@ class DbBase extends Data
     }
 
     // 获取指定部分SQL语句
-    final protected function parseSql($key)
+    final protected function parseSql($type)
     {
-        $val = $this->components->$key;
+        $val = $this->components->$type;
         if ($val) {
-            switch ($key) {
+            switch ($type) {
                 case 'on':
                     $i = 'ON ';
                     break;
@@ -443,10 +428,18 @@ class DbBase extends Data
                 default:
                     return '';
             }
-            return ' ' . $i . (is_array($val) ? implode(',', $val) : $val);
+            return ' ' . $i . self::unquote(is_array($val) ? implode(',', $val) : $val);
         } else {
-            return $key === 'field' ? ' *' : '';
+            return $type === 'field' ? ' *' : '';
         }
+    }
+
+    // SQL关键字辅助处理
+    final protected function unquote($str)
+    {
+        $str = preg_replace('/([a-zA-Z_]+)\.([a-zA-Z_]+)/', '`\1`.`\2`', $str);
+        $str = preg_replace('/([a-zA-Z_]+)\.\*/', '`\1`.*', $str);
+        return $str;
     }
 
 }

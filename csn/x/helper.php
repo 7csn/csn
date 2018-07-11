@@ -92,13 +92,15 @@ function parseIp($n)
 function ipArea($ip = '')
 {
     $area = new \stdClass();
-    $json = json_decode(file_get_contents('http://int.dpool.sina.com.cn/iplookup/iplookup.php?format=json&ip=' . $ip));
-    if (is_object($json)) {
-        $area->province = isset($json->province) ? $json->province : '未知';
-        $area->city = isset($json->city) ? $json->city : '未知';
+    $json = json_decode(file_get_contents('http://ip.taobao.com/service/getIpInfo.php?ip=' . $ip));
+    if ($json->code === 0) {
+        $area->country = $json->data->country;
+        $area->region = $json->data->region;
+        $area->city = $json->data->city;
     } else {
-        $area->province = '未知';
-        $area->city = '未知';
+        $area->country = 'XX';
+        $area->region = 'XX';
+        $area->city = 'XX';
     }
     return $area;
 }

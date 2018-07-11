@@ -61,11 +61,12 @@ class Controller
         $parent = get_parent_class($name);
         return $parent ? self::ancestor($parent) : $name;
     }
+
     // ----------------------------------------------------------------------
     //  显示信息并跳转
     // ----------------------------------------------------------------------
 
-    final static function redirect($url, $info = false, $time = 1000)
+    final protected function redirect($url, $info = false, $time = 1000)
     {
         $info && Csn::close($info, $url, $time);
         usleep($time * 1000);
@@ -86,9 +87,9 @@ class Controller
     //  创建视图
     // ----------------------------------------------------------------------
 
-    final protected function view($names, $stdClass, $cacheTime = null)
+    final protected function view($names, $func = null, $cacheTime = null)
     {
-        return View::instance($names)->makeHtml($stdClass, $cacheTime);
+        return View::instance($names)->makeHtml($func, $cacheTime);
     }
 
     // ----------------------------------------------------------------------

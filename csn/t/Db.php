@@ -22,10 +22,7 @@ final class Db extends DbBase
 
     private static function instance()
     {
-        if (is_null(self::$instance)) {
-            self::$instance = (new self)->component();
-        }
-        return self::$instance;
+        return is_null(self::$instance) ? self::$instance = (new self)->component() : self::$instance;
     }
 
     // ----------------------------------------------------------------------
@@ -34,12 +31,14 @@ final class Db extends DbBase
 
     private $address;
 
-    private function address($key)
+    protected function address($key = null)
     {
-        $dbs = Config::data('dbs.db');
-        key_exists($key, $dbs) || Csn::end('数据库配置 db 不存在 ' . $key . ' 键');
-        $this->address = $dbs[$key];
-        return $this;
+        return is_null($key) ? $this->address : call_user_func(function($obj) use ($key) {
+            $dbs = Config::data('dbs.db');
+            key_exists($key, $dbs) || Csn::end('数据库配置 db 不存在 ' . $key . ' 键');
+            $obj->address = $dbs[$key];
+            return $obj;
+        }, $this);
     }
 
     // ----------------------------------------------------------------------
@@ -60,8 +59,9 @@ final class Db extends DbBase
 
     function table($table, $th = null)
     {
-        is_null($th) && $th = self::dth($this->address);
-        return $this->tb($table, $th);
+        $dth = self::dth($this->address);
+        $table = (is_null($th) ? $dth : $th) . $table;
+        return $this->tb($table, $dth);
     }
 
     // ----------------------------------------------------------------------
@@ -69,7 +69,7 @@ final class Db extends DbBase
     // ----------------------------------------------------------------------
 
     // 增删改
-    function execute($sql, $bind = [])
+    function execute($sql, $bind = null)
     {
         $bool = self::modify(self::db($this->address, $this->dbn), $sql, $bind);
         $this->components->clear();
@@ -77,9 +77,11 @@ final class Db extends DbBase
     }
 
     // 查询
-    function query($sql, $bind = [], $rArr = false)
+    function query($sql, $bind = null, $rArr = false)
     {
-        return self::inQuery(self::db($this->address, $this->dbn), $sql, $bind, $rArr);
+        $res = self::inQuery(self::db($this->address, $this->dbn), $sql, $bind, $rArr);
+        $this->components->clear();
+        return $res;
     }
 
     // ----------------------------------------------------------------------
@@ -118,6 +120,7 @@ final class Db extends DbBase
     function insert($field = null)
     {
         list($sql, $bind) = $this->insertSql($field);
+        Csn::dump($sql, $bind);
         return $this->execute($sql, $bind);
     }
 
@@ -125,6 +128,7 @@ final class Db extends DbBase
     function delete()
     {
         list($sql, $bind) = $this->deleteSql();
+        Csn::dump($sql, $bind);
         return $this->execute($sql, $bind);
     }
 
@@ -132,6 +136,7 @@ final class Db extends DbBase
     function update($field = null)
     {
         list($sql, $bind) = $this->updateSql($field);
+        Csn::dump($sql, $bind);
         return $this->execute($sql, $bind);
     }
 
@@ -139,6 +144,7 @@ final class Db extends DbBase
     function select($rArr = false)
     {
         list($sql, $bind) = $this->selectSql();
+        Csn::dump($sql, $bind);
         return $this->query($sql, $bind, $rArr);
     }
 

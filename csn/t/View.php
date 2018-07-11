@@ -86,7 +86,7 @@ final class View extends Instance
             ob_end_clean();
             File::write($this->html, $content, true);
             return $content;
-        }, $func());
+        }, is_null($func) ? [] : $func());
     }
 
     // ----------------------------------------------------------------------

@@ -50,6 +50,15 @@ class Model extends DbBase
     }
 
     // ----------------------------------------------------------------------
+    //  获取当前数据库地址
+    // ----------------------------------------------------------------------
+
+    final protected static function address()
+    {
+//        return
+    }
+
+    // ----------------------------------------------------------------------
     //  表SQL封装
     // ----------------------------------------------------------------------
 
@@ -92,22 +101,23 @@ class Model extends DbBase
     //  库、表、字段信息
     // ----------------------------------------------------------------------
 
-    private static $tbn = false;         // 当前表名
-    private static $dbn = false;         // 当前库名
-    private static $descs = [];           // 表结构数组
+    protected static $tbn;                  // 当前表名
+    protected static $dbn;                  // 当前库名
+    protected static $dth;                  // 当前表前缀
+    private static $descs = [];             // 表结构数组
 
-    // 库名及表名初始化
+    // 库名、表名、表前缀初始化
     final protected static function names()
     {
         $class = get_called_class();
-        $class::$tbn || call_user_func(function ($class) {
+        is_null($class::$tbn) && call_user_func(function ($class) {
             strpos($class, 'app\\m\\') === 0 || Csn::end('数据库模型' . $class . '异常');
             $arr = array_reverse(explode('\\', substr($class, 6)));
             $count = count($arr);
             $count === 0 && Csn::end('数据库模型' . $class . '异常');
-            $class::$tbn = strtolower($arr[0]);
             $class::$dbn = key_exists(1, $arr) ? strtolower($arr[1]) : false;
-            Csn::dump($class);
+            is_null($class::$dth) && ($class::$dth = self::dth(self::slave()));
+            $class::$tbn = $class::$dth . strtolower($arr[0]);
         }, $class);
         return $class;
     }
@@ -127,12 +137,12 @@ class Model extends DbBase
     }
 
     // 查询表结构
-    final protected static function desc($tbn = null)
-    {
-        is_null($tbn) && $tbn = self::tbn();
-        $key = self::dbn() . '@' . $tbn;
-        return key_exists($key, self::$descs) ? self::$descs[$key] : self::$descs[$key] = parent::desc(self::slave(), self::dbn(), $tbn);
-    }
+//    final protected static function desc($tbn = null)
+//    {
+//        is_null($tbn) && $tbn = self::tbn();
+//        $key = self::dbn() . '@' . $tbn;
+//        return key_exists($key, self::$descs) ? self::$descs[$key] : self::$descs[$key] = parent::desc(self::slave(), self::dbn(), $tbn);
+//    }
 
     // ----------------------------------------------------------------------
     //  表操作(类)
@@ -201,8 +211,7 @@ class Model extends DbBase
     // 创建对象
     function __construct($where = null, $bind = null)
     {
-        Csn::dump('bbbbbbbb');
-//        $this->component()->where($where)->bind($bind)->table(self::tbn());
+        $this->component()->where($where)->bind($bind)->table(self::tbn());
     }
 
     // ----------------------------------------------------------------------
@@ -211,8 +220,7 @@ class Model extends DbBase
 
     function table($table)
     {
-        $th = self::dth(self::slave());
-        return $this->tb($table, $th);
+        return $this->tb($table, self::dth(self::slave()));
         return $this;
     }
 
@@ -282,7 +290,7 @@ class Model extends DbBase
     // 收集表单数据
     final function create()
     {
-        $desc = self::desc();
+        $desc = self::describe();
         $primaryKey = $desc->primaryKey;
         foreach ($desc->list as $k => $v) {
             if ($k === $primaryKey) continue;

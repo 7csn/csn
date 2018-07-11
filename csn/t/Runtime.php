@@ -6,9 +6,10 @@ final class Runtime
 {
 
     // ----------------------------------------------------------------------
-    //  记录访问日志
+    //  记录日志
     // ----------------------------------------------------------------------
 
+    // 访问
     static function action()
     {
         self::set('action', function () {
@@ -24,32 +25,26 @@ final class Runtime
         });
     }
 
-    // ----------------------------------------------------------------------
-    //  记录错误日志
-    // ----------------------------------------------------------------------
-
+    // 错误
     static function error($info)
     {
-        self::set('error', call_user_func(function ($info) {
+        self::set('error', function () use ($info) {
             list($date, $hour, $minute) = explode(' ', date('Ymd H i:s'));
             File::append(RUN . 'error' . DS . $date . DS . $hour . '.log', $minute . ' ' . $info . ENTER);
-        }, $info));
+        });
     }
 
-    // ----------------------------------------------------------------------
-    //  记录SQL日志
-    // ----------------------------------------------------------------------
-
+    // SQL
     static function sql($info)
     {
-        self::set('sql', call_user_func(function ($info) {
+        self::set('sql', function () use ($info) {
             list($date, $hour, $minute) = explode(' ', date('Ymd H i:s'));
             File::append(RUN . 'sql' . DS . $date . DS . $hour . '.log', $minute . ' ' . $info . ENTER);
-        }, $info));
+        });
     }
 
     // ----------------------------------------------------------------------
-    //  记录日志记录模板
+    //  记录日志模板
     // ----------------------------------------------------------------------
 
     private static function set($type, $func)
