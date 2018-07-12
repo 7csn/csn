@@ -2,7 +2,7 @@
 
 namespace csn;
 
-class Instance
+abstract class Instance
 {
 
     // ----------------------------------------------------------------------

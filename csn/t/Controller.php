@@ -40,6 +40,7 @@ class Controller
         is_file($file = APP_CONTROLLER . $name . '.php') ? Csn::need($file) : Csn::end('控制器' . $name . '不存在');
         $class = '\app\c\\' . $controller;
         self::$controllers[$controller] = ['name' => $name, 'obj' => new $class()];
+        method_exists(self::$controllers[$controller]['obj'], 'init') && self::$controllers[$controller]['obj']->init();
         return self::$controllers[$controller]['obj'];
     }
 
@@ -87,7 +88,7 @@ class Controller
     //  创建视图
     // ----------------------------------------------------------------------
 
-    final protected function view($names, $func = null, $cacheTime = null)
+    final function view($names, $func = null, $cacheTime = null)
     {
         return View::instance($names)->makeHtml($func, $cacheTime);
     }
@@ -96,46 +97,22 @@ class Controller
     //  接口数据返回
     // ----------------------------------------------------------------------
 
-    final static function text($data)
-    {
-        header('Content-Type:text/pain');
-        return $data;
-    }
-
     final static function html($data)
     {
-        header('Content-Type:text/pain');
-        return $data;
-    }
-
-    final static function json($data)
-    {
-        header('Content-Type:application/json');
+        header('Content-Type:text/html');
         return $data;
     }
 
     final static function xml($data)
     {
-        header('Content-Type:text/pain');
-        return $data;
+        header('Content-Type:text/xml');
+        return is_string($data) ? $data : xml_encode($data);
     }
 
-    final static function back($back, $type = 'json')
+    final static function script($str)
     {
-        switch ($type) {
-            case 'xml':
-                header('Content-Type:text/xml');
-                return is_string($back) ? $back : xml_encode($back);
-            case 'jsonp':
-                header('Content-Type:application/json');
-                return '(' . (is_string($back) ? $back : json_encode($back)) . ');';
-            case 'html':
-                header('Content-Type:text/html');
-                return $back;
-            default :
-                header('Content-Type:application/json');
-                return is_string($back) ? $back : json_encode($back);
-        }
+        header('Content-Type:text/javascript');
+        return $str;
     }
 
 }

@@ -84,7 +84,7 @@ final class Config extends Instance
     // 加载配置项内容
     private static function load($name)
     {
-        return key_exists($name, self::$config) ? self::$config[$name] : self::$config[$name] = self::makeup(self::app($name), self::csn($name));
+        return key_exists($name, self::$config) ? self::$config[$name] : self::$config[$name] = $name === 'data' ? self::app($name) : self::makeup(self::app($name), self::csn($name));
     }
 
     // 应用配置
@@ -102,7 +102,7 @@ final class Config extends Instance
     // 获取框架配置项内容
     private static function csn($name)
     {
-        return $name === 'data' ? [] : key_exists($name, self::$csn) ? self::$csn[$name] : self::$csn[$name] = Csn::need(CSN_S . $name . '.php') ?: [];
+        return key_exists($name, self::$csn) ? self::$csn[$name] : self::$csn[$name] = Csn::need(CSN_S . $name . '.php') ?: [];
     }
 
     // ----------------------------------------------------------------------

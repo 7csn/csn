@@ -49,7 +49,7 @@ final class View extends Instance
 
     private function view()
     {
-        return key_exists($this->path, self::$views) ? self::$views[$this->path] : self::$views[$this->path] = APP_VIEW . $this->path . '.php';
+        return key_exists($this->path, self::$views) ? self::$views[$this->path] : self::$views[$this->path] = APP_VIEW . $this->path . '.tpl';
     }
 
     // ----------------------------------------------------------------------
@@ -78,15 +78,16 @@ final class View extends Instance
 
     function makeHtml($func, $time)
     {
-        return $this->htmlOK($time) ? file_get_contents($this->html) : call_user_func(function ($data) {
+        return $this->htmlOK($time) ? file_get_contents($this->html) : call_user_func(function ($data) use ($time) {
             ob_start();
             extract($data);
             include $this->php();
             $content = ob_get_contents();
             ob_end_clean();
-            File::write($this->html, $content, true);
+            is_null($time) && $time = Config::web('view_cache');
+            $time && File::write($this->html, $content, true);
             return $content;
-        }, is_null($func) ? [] : $func());
+        }, is_array($func) ? $func : (is_null($func) ? [] : $func()));
     }
 
     // ----------------------------------------------------------------------
@@ -95,7 +96,7 @@ final class View extends Instance
 
     private function compileGo()
     {
-        $content = "<?php namespace app\c; ?>" . file_get_contents($this->view());
+        $content = "<?php namespace app\c; ?>" . ENTER . file_get_contents($this->view());
         $this->compileExtends($content);
         $this->compileSectionChange($content);
         $this->compileSectionShow($content);
@@ -134,7 +135,7 @@ final class View extends Instance
     {
         $names = $match[2];
         $path = $this->path($names);
-        $source = self::source($path, true);
+        $source = APP_VIEW . $path . '.tpl';
         is_file($source) || Csn::end('找不到视图模板' . $path);
         $parent = file_get_contents($source);
         $this->compileSectionSave($parent);
@@ -157,7 +158,7 @@ final class View extends Instance
     // 继承模板区块重写
     protected function compileSectionChange(&$content)
     {
-        $content = preg_replace_callback('/@section\s*\(([\'"])?(.+?)\1\)(.*?)@endsection/us', [$this, '_compileSectionChange'], $content);
+        $content = preg_replace_callback('/@section\s*\(([\'"])?(.+?)\1\)(.*?)@endSection/us', [$this, '_compileSectionChange'], $content);
     }
 
     // 编译继承模板区块重写
@@ -270,13 +271,22 @@ final class View extends Instance
     // include模板
     protected static function compileInclude(&$content)
     {
-        $content = preg_replace_callback('/<include\s+file=(["\'])([\w\.]+)\1\s*(data=(["\'])(\w+)\4)?\s*(time=(["\'])(\d+)\7)?\s*\/?>/', 'self::_compileInclude', $content);
+        $content = preg_replace_callback('/<include\s+file=(["\'])([\w\.]+)\1\s*(data=(["\'])([\w\|]+)\4)?\s*(time=(["\'])(\d+)\7)?\s*\/?>/', 'self::_compileInclude', $content);
     }
 
     // 编译include模板
     protected static function _compileInclude($match)
     {
-        return '<?php viewInclude("' . $match[2] . '", ' . (empty($match[5]) ? '[]' : '["' . $match[5] . '"=>$' . $match[5] . ']') . ', ' . (empty($match[8]) ? 'null' : (int)$match[8]) . ');?>';
+        if (empty($match[5])) {
+            $dataStr = '[]';
+        } else {
+            $data = [];
+            foreach (explode('|', $match[5]) as $name) {
+                $data[] = '"' . $name . '"=>$' . $name;
+            }
+            $dataStr = '[' . join(',', $data) . ']';
+        }
+        return '<?php viewInclude("' . $match[2] . '", ' . $dataStr . ', ' . (empty($match[8]) ? 'null' : (int)$match[8]) . ');?>';
     }
 
 }

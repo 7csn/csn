@@ -71,8 +71,10 @@ final class Db extends DbBase
     // 增删改
     function execute($sql, $bind = null)
     {
+        $link = self::db($this->address, $this->dbn);
         $bool = self::modify(self::db($this->address, $this->dbn), $sql, $bind);
         $this->components->clear();
+        if ($bool) $bool = $link->lastInsertId();
         return $bool;
     }
 
@@ -128,7 +130,7 @@ final class Db extends DbBase
     function delete()
     {
         list($sql, $bind) = $this->deleteSql();
-        Csn::dump($sql, $bind);
+//        Csn::dump($sql, $bind);
         return $this->execute($sql, $bind);
     }
 
@@ -136,7 +138,7 @@ final class Db extends DbBase
     function update($field = null)
     {
         list($sql, $bind) = $this->updateSql($field);
-        Csn::dump($sql, $bind);
+//        Csn::dump($sql, $bind);
         return $this->execute($sql, $bind);
     }
 
@@ -144,7 +146,7 @@ final class Db extends DbBase
     function select($rArr = false)
     {
         list($sql, $bind) = $this->selectSql();
-        Csn::dump($sql, $bind);
+//        Csn::dump($sql, $bind);
         return $this->query($sql, $bind, $rArr);
     }
 

@@ -36,10 +36,27 @@ function url($path, $full = false)
 }
 
 // ----------------------------------------------------------------------
+//  获取路由
+// ----------------------------------------------------------------------
+
+function varType($var)
+{
+    if (is_object($var)) return "object";
+    if (is_resource($var)) return "resource";
+    if ((bool)$var === $var) return "bool";
+    if ((float)$var === $var) return "float";
+    if ((int)$var === $var) return "int";
+    if ((string)$var === $var) return "string";
+    if (null === $var) return "null";
+    return "unknown";
+}
+
+// ----------------------------------------------------------------------
 //  缓存
 // ----------------------------------------------------------------------
 
-function system($name, $func = null, $args = []) {
+function system($name, $func = null, $args = [])
+{
     static $system = [];
     return key_exists($name, $system) ? $system[$name] : $system[$name] = call_user_func_array($func, $args);
 }
@@ -50,9 +67,7 @@ function system($name, $func = null, $args = []) {
 
 function viewInclude($path, $data, $time)
 {
-    $cache = cache($path, $time) ?: view($path, $data, $time)->getView();
-    is_null($data) || extract($data);
-    include $cache;
+    echo \csn\View::instance($path)->makeHtml($data, $time);
 }
 
 // ----------------------------------------------------------------------

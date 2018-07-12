@@ -288,7 +288,7 @@ class DbBase extends Data
     // 字段
     final function field($field, $bind = null)
     {
-        empty($field) || ($this->bind($bind)->components->field = $field);
+        empty($field) || ($this->bind($bind)->components->field = is_array($field) ? $field : explode(',', $field));
         return $this;
     }
 
@@ -354,10 +354,12 @@ class DbBase extends Data
         $tables = $this->parseTable();
         foreach (current($this->parseField()) as $k => $v) {
             $lock = join('__', array_reverse(explode('.', $k)));
-            $set[] = "$k = :{$lock}__";
+            $key = strpos($k, '.') === false ? "`$k`" : $this->unquote($k);
+            $set[] = "$key = :{$lock}__";
             $bind[":{$lock}__"] = is_array($v) ? serialize($v) : $v;
         }
-        $sql = 'UPDATE' . $tables . $this->parseSql('on') . ' SET ' . $this->unquote(implode(',', $set)) . $this->parseWhere() . $this->parseSql('group') . $this->parseSql('order') . $this->parseSql('limit');
+        $sets = implode(',', $set);
+        $sql = 'UPDATE' . $tables . $this->parseSql('on') . ' SET ' . $sets . $this->parseWhere() . $this->parseSql('group') . $this->parseSql('order') . $this->parseSql('limit');
         return [$sql, $bind];
     }
 

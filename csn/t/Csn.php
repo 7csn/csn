@@ -239,7 +239,7 @@ final class Csn
     // 根据模式报错
     static function end($msg)
     {
-        T_S ? Csn::show($msg) : Csn::close('页面不存在');
+        Request::instance()->isAjax() ? Api::instance('n', '非法调用')->run() : (T_S ? Csn::show($msg) : Csn::close('页面不存在'));
     }
 
 }

@@ -17,7 +17,6 @@ final class Request extends Instance
         // 前缀URL目录：前端、后端
         define('WEB_PRE', substr($scriptName, 0, $index));
         define('PHP_PRE', Config::web('rewrite') ? WEB_PRE : $scriptName);
-        $this->query = $_SERVER['QUERY_STRING'];
         $this->uri = isset($_SERVER['REQUEST_URI']) ? $_SERVER['REQUEST_URI'] : $_SERVER['PHP_SELF'] . ($_SERVER['QUERY_STRING'] ? '?' . $_SERVER['QUERY_STRING'] : '');
         $uri = preg_replace('/\.html$/', '', preg_replace("/^(\/[^\?&#]+)?.*?$/", '\1', $this->uri));
         $len = strlen($scriptName);
@@ -30,6 +29,8 @@ final class Request extends Instance
         $this->isAjax = (isset($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) == 'xmlhttprequest') || key_exists(Config::web('ajax'), $_POST) || key_exists(Config::web('ajax'), $_GET);
         $this->ip = $this->ip();
         $this->mobile = $this->mobile();
+        $this->get = $_GET;
+        $this->post = $_POST;
         return self::single();
     }
 
@@ -175,29 +176,25 @@ final class Request extends Instance
     }
 
     // ----------------------------------------------------------------------
-    //  参数值：QueryString
+    //  参数值：GET
     // ----------------------------------------------------------------------
 
-    private $query;
+    private $get;
 
-    function query($name, $default = null)
+    function get($name = null, $default = null)
     {
-        return preg_match("/(^|&)$name=([^&]*)(&|$)/", $this->query, $match) ? urldecode($match[2]) : $default;
+        return is_null($name) ? $this->get : (key_exists($name, $this->get) ? $this->get[$name] : $default);
     }
 
     // ----------------------------------------------------------------------
     //  参数值：POST
     // ----------------------------------------------------------------------
 
-    function post($key = false)
-    {
-        is_null(self::$post) && self::$post = Safe::initData($_POST);
-        return $key ? key_exists($key, self::$post) ? self::$post[$key] : null : self::$post;
-    }
+    private $post;
 
-    function param($key = false)
+    function post($name = null, $default = null)
     {
-
+        return is_null($name) ? $this->post : (key_exists($name, $this->post) ? $this->post[$name] : $default);
     }
 
     // ----------------------------------------------------------------------
