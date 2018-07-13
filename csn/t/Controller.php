@@ -33,15 +33,12 @@ class Controller
     final static function controller($controller, $module = '')
     {
         $name = ($module ? str_replace('/', DS, $module) . DS : '') . $controller;
-        if (key_exists($controller, self::$controllers)) {
-            self::$controllers[$controller]['name'] === $name || Csn::end('禁止跨模块引入同名控制器');
-            return self::$controllers[$controller]['obj'];
-        }
+        if (key_exists($name, self::$controllers)) return self::$controllers[$name];
         is_file($file = APP_CONTROLLER . $name . '.php') ? Csn::need($file) : Csn::end('控制器' . $name . '不存在');
-        $class = '\app\c\\' . $controller;
-        self::$controllers[$controller] = ['name' => $name, 'obj' => new $class()];
-        method_exists(self::$controllers[$controller]['obj'], 'init') && self::$controllers[$controller]['obj']->init();
-        return self::$controllers[$controller]['obj'];
+        $class = '\app\c\\' . $name;
+        self::$controllers[$name] = new $class();
+        method_exists(self::$controllers[$name], 'init') && self::$controllers[$name]->init();
+        return self::$controllers[$name];
     }
 
     // ----------------------------------------------------------------------
@@ -67,7 +64,7 @@ class Controller
     //  显示信息并跳转
     // ----------------------------------------------------------------------
 
-    final protected function redirect($url, $info = false, $time = 1000)
+    final protected function redirect($url = '/', $info = false, $time = 1000)
     {
         $info && Csn::close($info, $url, $time);
         usleep($time * 1000);

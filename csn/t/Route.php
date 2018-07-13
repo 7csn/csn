@@ -116,7 +116,7 @@ final class Route extends Instance
                     }
                     // POST参数验证过滤
                     if (!$method === 'POST' || !key_exists('input', $route) || self::input($route['input'])) {
-                        $search = ['point' => $route['point'], 'args' => $args, 'path' => $key];
+                        $search = ['point' => $route['point'], 'args' => $args, 'path' => $key, 'cache' => key_exists('cache', $route) ? $route['cache']: Config::web('route_cache')];
                         break;
                     }
                 }

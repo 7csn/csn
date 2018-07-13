@@ -72,4 +72,16 @@ final class Tap extends Instance
         return $this;
     }
 
+    // ----------------------------------------------------------------------
+    //  缓存时间
+    // ----------------------------------------------------------------------
+
+    function cache($time)
+    {
+        foreach ($this->method as $method) {
+            Route::$taps[$method][$this->path]['cache'] = $time;
+        }
+        return $this;
+    }
+
 }

@@ -56,7 +56,7 @@ final class Csn
     // ----------------------------------------------------------------------
 
     // 对照表：类名前缀=>路径前缀
-    private static $load = ['csn\y\\' => CSN_Y, 'csn\\' => CSN_T, 'app\m\\' => APP_MODEL];
+    private static $load = ['csn\y\\' => CSN_Y, 'csn\\' => CSN_T, 'app\m\\' => APP_MODEL, 'app\c\\' => APP_CONTROLLER];
 
     // 类自加载
     static function load($class)

@@ -79,14 +79,18 @@ final class View extends Instance
     function makeHtml($func, $time)
     {
         return $this->htmlOK($time) ? file_get_contents($this->html) : call_user_func(function ($data) use ($time) {
-            ob_start();
-            extract($data);
-            include $this->php();
-            $content = ob_get_contents();
-            ob_end_clean();
+            $func = Course::instance(function() use ($data) {
+                extract($data);
+                include $this->php().'';
+            });
             is_null($time) && $time = Config::web('view_cache');
-            $time && File::write($this->html, $content, true);
-            return $content;
+            if ($time > 0) {
+                $content = $func->buffer();
+                $time && File::write($this->html, $content, true);
+                return $content;
+            } else {
+                $func->run();
+            }
         }, is_array($func) ? $func : (is_null($func) ? [] : $func()));
     }
 
@@ -96,7 +100,7 @@ final class View extends Instance
 
     private function compileGo()
     {
-        $content = "<?php namespace app\c; ?>" . ENTER . file_get_contents($this->view());
+        $content = file_get_contents($this->view());
         $this->compileExtends($content);
         $this->compileSectionChange($content);
         $this->compileSectionShow($content);

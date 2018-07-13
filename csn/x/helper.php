@@ -1,7 +1,5 @@
 <?php
 
-namespace app\c;
-
 // ----------------------------------------------------------------------
 //  Db对象：指定库名、链接
 // ----------------------------------------------------------------------
@@ -55,11 +53,11 @@ function varType($var)
 //  缓存
 // ----------------------------------------------------------------------
 
-function system($name, $func = null, $args = [])
-{
-    static $system = [];
-    return key_exists($name, $system) ? $system[$name] : $system[$name] = call_user_func_array($func, $args);
-}
+//function system($name, $func = null, $args = [])
+//{
+//    static $system = [];
+//    return key_exists($name, $system) ? $system[$name] : $system[$name] = call_user_func_array($func, $args);
+//}
 
 // ----------------------------------------------------------------------
 //  模板引入方法
