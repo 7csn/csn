@@ -5,7 +5,6 @@ return [
     'session' => [
         'memcache' => false,
         'cookie' => [
-            'save_path' => APP_SESSION,
             'use_cookies' => 1,
             'use_only_cookies' => 1,
             'cookie_httponly' => 1,

@@ -39,9 +39,37 @@ final class Response extends Instance
             $this->export = true;
             // 访问日志
             Runtime::action();
-            $run = is_callable($point = $route['point']) ? call_user_func_array($point, self::actionParams((new \ReflectionFunction($point))->getParameters(), $route['args'])) : $this->action($point, $route['args']);
+            // 静态化路径
+            $html = $this->html($route['path'], $route['args']);
+//            Csn::dump($html, $this->htmlOK($html, $route['cache']));
+            if ($this->htmlOK($html, $route['cache'])) {
+                $run = file_get_contents($html);
+            } else {
+                $run = Course::instance(function($obj) use ($route) {
+                    return is_callable($point = $route['point']) ? call_user_func_array($point, self::actionParams((new \ReflectionFunction($point))->getParameters(), $route['args'])) : $obj->action($point, $route['args']);
+                })->args($this)->run();
+                $route['cache'] > 0 && File::write($html, $run, true);
+            }
             is_null($run) || exit(is_string($run) ? $run : json_encode($run));
         }
+    }
+
+    // ----------------------------------------------------------------------
+    //  获取路由静态化文件
+    // ----------------------------------------------------------------------
+
+    function html($path, $args)
+    {
+        return WEB_ROUTE . Safe::en(serialize($path)) . DS . Safe::en(serialize($args)) . '.html';
+    }
+
+    // ----------------------------------------------------------------------
+    //  验证路由静态化文件有性
+    // ----------------------------------------------------------------------
+
+    function htmlOK($html, $time)
+    {
+        return $time > 0 && (is_file($html) && filemtime($html) + $time > CSN_START);
     }
 
     // ----------------------------------------------------------------------

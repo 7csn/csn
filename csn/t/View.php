@@ -69,7 +69,8 @@ final class View extends Instance
 
     private function htmlOK($time = null)
     {
-        return is_file($this->html) && filemtime($this->html) + (is_null($time) ? Config::web('view_cache') : $time) > CSN_START;
+        is_null($time) && $time = Config::web('view_cache');
+        return $time > 0 && (filemtime($this->html) + $time > CSN_START);
     }
 
     // ----------------------------------------------------------------------
@@ -79,18 +80,13 @@ final class View extends Instance
     function makeHtml($func, $time)
     {
         return $this->htmlOK($time) ? file_get_contents($this->html) : call_user_func(function ($data) use ($time) {
-            $func = Course::instance(function() use ($data) {
+            $content = Course::instance(function () use ($data) {
                 extract($data);
-                include $this->php().'';
-            });
+                include $this->php() . '';
+            })->buffer();
             is_null($time) && $time = Config::web('view_cache');
-            if ($time > 0) {
-                $content = $func->buffer();
-                $time && File::write($this->html, $content, true);
-                return $content;
-            } else {
-                $func->run();
-            }
+            $time > 0 && File::write($this->html, $content, true);
+            return $content;
         }, is_array($func) ? $func : (is_null($func) ? [] : $func()));
     }
 
