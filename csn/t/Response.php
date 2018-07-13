@@ -41,7 +41,6 @@ final class Response extends Instance
             Runtime::action();
             // 静态化路径
             $html = $this->html($route['path'], $route['args']);
-//            Csn::dump($html, $this->htmlOK($html, $route['cache']));
             if ($this->htmlOK($html, $route['cache'])) {
                 $run = file_get_contents($html);
             } else {

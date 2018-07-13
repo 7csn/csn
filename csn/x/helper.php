@@ -21,7 +21,7 @@ function table()
 {
     $args = func_get_args();
     $table = array_shift($args);
-    return call_user_func_array('\app\c\db', $args)->table($table);
+    return call_user_func_array('db', $args)->table($table);
 }
 
 // ----------------------------------------------------------------------
