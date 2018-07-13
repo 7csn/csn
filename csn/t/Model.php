@@ -2,7 +2,7 @@
 
 namespace csn;
 
-class Model extends DbBase
+abstract class Model extends DbBase
 {
 
     // ----------------------------------------------------------------------
@@ -19,7 +19,7 @@ class Model extends DbBase
     final protected static function writes()
     {
         if (is_null(self::$ws)) {
-            list(self::$ws, self::$ms) = MS::init(Config::data('dbs.model.nodes'));
+            list(self::$ws, self::$ms) = MS::init(Config::data('mysql.model.nodes'));
         }
         return self::$ws;
     }
@@ -50,87 +50,84 @@ class Model extends DbBase
     }
 
     // ----------------------------------------------------------------------
+    //  获取数据库地址
+    // ----------------------------------------------------------------------
+
+    final protected static function address($read = false)
+    {
+        return ($read && !self::getTrans()) ? self::slave() : self::master();
+    }
+
+    // ----------------------------------------------------------------------
+    //  获取节点信息
+    // ----------------------------------------------------------------------
+
+    final protected static function node($address)
+    {
+        $links = Config::data('mysql.model.link');
+        key_exists($address, $links) || Csn::end('数据库连接配置键 ' . $address . ' 不存在');
+        $node = $links[$address];
+        $node['dbn'] = $links['dbn'];
+        $node['dth'] = key_exists('dth', $links) ? $links['dth'] : '';
+        return $node;
+    }
+
+    // ----------------------------------------------------------------------
     //  表SQL封装
     // ----------------------------------------------------------------------
 
-    // SQL语句
-    private static $sqls;
-
     // 查询
-    final static function query($func, $rArr = false, $tbn = null)
+    final static function query($sql, $bind = [], $rArr = false)
     {
-        $sqls = call_user_func($func, is_null($tbn) ? self::tbn() : $tbn);
-        if (is_array($sqls)) {
-            list($sql, $bind) = $sqls;
-        } else {
-            $sql = $sqls;
-            $bind = [];
-        }
-        return self::inQuery(self::db(self::getTrans() ? self::master() : self::slave(), self::dbn()), $sql, $bind, $rArr);
+        $address = self::address(true);
+        $link = self::setDbn($address, self::dbn($address));
+        return self::inQuery($link, $sql, $bind, $rArr);
     }
 
     // 修改
-    final static function execute($func)
+    final static function execute($sql, $bind = [], $insert = false)
     {
-        $sqls = call_user_func($func, self::tbn());
-        if (is_array($sqls)) {
-            list($sql, $bind) = $sqls;
-        } else {
-            $sql = $sqls;
-            $bind = [];
-        }
-        return self::modify(self::db(self::master(), self::dbn()), $sql, $bind);
-    }
-
-    // 获取SQL语句
-    final static function sqls()
-    {
-        return self::$sqls;
+        $link = self::setDbn(self::master(), self::dbn(self::master()));
+        $bool = self::modify($link, $sql, $bind);
+        if ($bool && $insert) $bool = $link->lastInsertId();
+        return $bool;
     }
 
     // ----------------------------------------------------------------------
     //  库、表、字段信息
     // ----------------------------------------------------------------------
 
-    protected static $tbn;                  // 当前表名
     protected static $dbn;                  // 当前库名
+    protected static $tbn;                  // 当前表名
     protected static $dth;                  // 当前表前缀
 
     // 库名、表名、表前缀初始化
-    final protected static function names()
+    final protected static function names($address)
     {
         $class = get_called_class();
-        is_null($class::$tbn) && call_user_func(function ($class) {
+        is_null($class::$tbn) && call_user_func(function ($class) use ($address) {
             strpos($class, 'app\\m\\') === 0 || Csn::end('数据库模型' . $class . '异常');
-            $arr = array_reverse(explode('\\', substr($class, 6)));
-            $count = count($arr);
-            $count === 0 && Csn::end('数据库模型' . $class . '异常');
-            $class::$dbn = key_exists(1, $arr) ? strtolower($arr[1]) : self::dn(self::slave());
-            is_null($class::$dth) && ($class::$dth = self::dth(self::slave()));
+            ($name = substr($class, 6)) || Csn::end('数据库模型' . $class . '异常');
+            $arr = array_reverse(explode('\\', $name));
+            $class::$dbn = key_exists(1, $arr) ? strtolower($arr[1]) : self::dbnBase($address);
+            is_null($class::$dth) && ($class::$dth = self::dthBase($address));
             $class::$tbn = $class::$dth . strtolower($arr[0]);
         }, $class);
         return $class;
     }
 
     // 获取表名
-    final protected static function tbn()
+    final protected static function tbn($address)
     {
-        $class = self::names();
+        $class = self::names($address);
         return $class::$tbn;
     }
 
-    // 获取表前缀
-    final protected static function th()
-    {
-        $class = self::names();
-        return $class::$dth;
-    }
-
     // 获取/设置库名
-    final static function dbn($dbn = null)
+    final protected static function dbn($address)
     {
-        $class = self::names();
-        return is_null($dbn) ? $class::$dbn : $class::$dbn = $dbn;
+        $class = self::names($address);
+        return $class::$dbn;
     }
 
     // ----------------------------------------------------------------------
@@ -148,19 +145,17 @@ class Model extends DbBase
     // 查询全部行
     final static function all($field = '*', $rArr = false)
     {
-        return self::query(function ($tbn) use ($field) {
-            $fields = is_array($field) ? '`' . implode('`,`', $field) . '`' : $field;
-            return " SELECT $fields FROM `$tbn` ";
-        }, $rArr);
+        $fields = is_array($field) ? '`' . implode('`,`', $field) . '`' : $field;
+        $tbn = self::tbn(self::address(true));
+        return self::query(" SELECT $fields FROM `$tbn` ", [], $rArr);
     }
 
     // 删除指定行
     final static function destroy($id)
     {
         list($primaryKey, $id) = self::primaryKey($id);
-        return self::execute(function ($tbn) use ($primaryKey, $id) {
-            return [" DELETE FROM `$tbn` WHERE `$primaryKey` = :id ", [':id' => $id]];
-        });
+        $tbn = self::tbn(self::master());
+        return self::execute(" DELETE FROM `$tbn` WHERE `$primaryKey` = :id ", [':id' => $id]);
     }
 
     // 事务
@@ -183,7 +178,7 @@ class Model extends DbBase
     // 条件
     final static function which($where, $bind = null, $obj = null)
     {
-        return (is_null($obj) || !($obj instanceof self)) ? new self($where, $bind) : $obj->where($where)->bind($bind);
+        return (is_null($obj) ? (get_called_class())::instance() : $obj)->where($where)->bind($bind);
     }
 
     // 主键
@@ -194,23 +189,22 @@ class Model extends DbBase
     }
 
     // ----------------------------------------------------------------------
-    //  对象配置
+    //  单例对象
     // ----------------------------------------------------------------------
 
-    // 创建对象
-    function __construct($where = null, $bind = null)
+    function construct()
     {
-        $this->component()->where($where)->bind($bind);
+        $this->component();
+        return true;
     }
 
     // ----------------------------------------------------------------------
     //  指定表
     // ----------------------------------------------------------------------
 
-    function table($table, $address)
+    final protected function table($address)
     {
-        return $this->tb($table, self::dth($address))->position($address, self::th());
-        return $this;
+        return $this->position(self::tbn($address), $address, self::dbn($address));
     }
 
     // ----------------------------------------------------------------------
@@ -220,38 +214,29 @@ class Model extends DbBase
     // 增
     final function insert($field = null)
     {
-        list($sql, $bind) = $this->table(self::tbn(), self::master())->insertSql($field);
-        return self::execute(function () use ($sql, $bind) {
-            return is_null($bind) ? $sql : [$sql, $bind];
-        });
+        list($sql, $bind) = $this->table(self::master())->insertSql($field);
+        return self::execute($sql, $bind, true);
     }
 
     // 删
     final function delete()
     {
-        list($sql, $bind) = $this->table(self::tbn(), self::master())->deleteSql();
-        return self::execute(function () use ($sql, $bind) {
-            return is_null($bind) ? $sql : [$sql, $bind];
-        });
+        list($sql, $bind) = $this->table(self::master())->deleteSql();
+        return self::execute($sql, $bind);
     }
 
     // 改
     final function update($field = null)
     {
-        list($sql, $bind) = $this->table(self::tbn(), self::master())->updateSql($field);
-        return self::execute(function () use ($sql, $bind) {
-            return is_null($bind) ? $sql : [$sql, $bind];
-        });
+        list($sql, $bind) = $this->table(self::master())->updateSql($field);
+        return self::execute($sql, $bind);
     }
 
     // 查多行
     final function select($rArr = false)
     {
-        list($sql, $bind) = $this->table(self::tbn(), self::getTrans() ? self::master() : self::slave())->updateSql();
-        $arr = self::query(function () use ($sql, $bind) {
-            return is_null($bind) ? $sql : [$sql, $bind];
-        }, $rArr);
-        return $arr;
+        list($sql, $bind) = $this->table(self::address(true))->selectSql();
+        return self::query($sql, $bind, $rArr);
     }
 
     // 查单行
@@ -269,7 +254,7 @@ class Model extends DbBase
     {
         is_null($field) || $this->field($field);
         $find = $this->find(\PDO::FETCH_OBJ);
-        return is_null($field) ? current($find) ?: null : (key_exists($field, $find) ? $find[$field] : null);
+        return current($find) ?: null;
     }
 
     // ----------------------------------------------------------------------
@@ -277,7 +262,7 @@ class Model extends DbBase
     // ----------------------------------------------------------------------
 
     // 收集表单数据
-    final function create()
+    final function collect()
     {
         $desc = self::describe();
         $primaryKey = $desc->primaryKey;

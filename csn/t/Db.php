@@ -15,28 +15,39 @@ final class Db extends DbBase
     }
 
     // ----------------------------------------------------------------------
-    //  单例对象
+    //  获取节点信息
     // ----------------------------------------------------------------------
 
-    private static $instance;
-
-    private static function instance()
+    final protected static function node($address)
     {
-        return is_null(self::$instance) ? self::$instance = (new self)->component() : self::$instance;
+        $links = Config::data('mysql.db');
+        key_exists($address, $links) || Csn::end('数据库连接配置键 ' . $address . ' 不存在');
+        return $links[$address];
     }
 
     // ----------------------------------------------------------------------
-    //  服务器地址
+    //  单例对象
+    // ----------------------------------------------------------------------
+
+    function construct()
+    {
+        $this->component();
+        return true;
+    }
+
+    // ----------------------------------------------------------------------
+    //  服务器地址：存取
     // ----------------------------------------------------------------------
 
     private $address;
 
     protected function address($key = null)
     {
-        return is_null($key) ? $this->address : call_user_func(function($obj) use ($key) {
-            $dbs = Config::data('dbs.db');
+        return is_null($key) ? $this->address : call_user_func(function ($obj) use ($key) {
+            $dbs = Config::data('mysql.db');
             key_exists($key, $dbs) || Csn::end('数据库配置 db 不存在 ' . $key . ' 键');
             $obj->address = $dbs[$key];
+            $obj->dbn = self::dbnBase($dbs[$key]);
             return $obj;
         }, $this);
     }
@@ -59,9 +70,7 @@ final class Db extends DbBase
 
     function table($table, $th = null)
     {
-        $dth = self::dth($this->address);
-        $table = (is_null($th) ? $dth : $th) . $table;
-        return $this->tb($table, $dth)->position($this->address, $this->dbn);
+        return $this->position((is_null($th) ? self::dthBase($this->address) : $th) . $table, $this->address, $this->dbn);
     }
 
     // ----------------------------------------------------------------------
@@ -69,19 +78,21 @@ final class Db extends DbBase
     // ----------------------------------------------------------------------
 
     // 增删改
-    function execute($sql, $bind = null)
+    function execute($sql, $bind = null, $insert = false)
     {
-        $link = self::db($this->address, $this->dbn);
-        $bool = self::modify(self::db($this->address, $this->dbn), $sql, $bind);
+//        Csn::dump($sql, $bind);
+        $link = self::setDbn($this->address, $this->dbn);
+        $bool = self::modify($link, $sql, $bind);
         $this->components->clear();
-        if ($bool) $bool = $link->lastInsertId();
+        if ($bool && $insert) $bool = $link->lastInsertId();
         return $bool;
     }
 
     // 查询
     function query($sql, $bind = null, $rArr = false)
     {
-        $res = self::inQuery(self::db($this->address, $this->dbn), $sql, $bind, $rArr);
+//        Csn::dump($sql, $bind);
+        $res = self::inQuery(self::setDbn($this->address, $this->dbn), $sql, $bind, $rArr);
         $this->components->clear();
         return $res;
     }
@@ -92,7 +103,7 @@ final class Db extends DbBase
 
     function truncate($table, $th = null)
     {
-        is_null($th) && $th = self::dth($this->address);
+        is_null($th) && $th = self::dthBase($this->address);
         return $this->execute(" TRUNCATE TABLE `{$th}{$table}` ");
     }
 
@@ -100,7 +111,7 @@ final class Db extends DbBase
     //  事务处理
     // ----------------------------------------------------------------------
 
-    function commit()
+    function transaction()
     {
         $pdo = self::$link;
         $pdo->beginTransaction();
@@ -122,15 +133,13 @@ final class Db extends DbBase
     function insert($field = null)
     {
         list($sql, $bind) = $this->insertSql($field);
-//        Csn::dump($sql, $bind);
-        return $this->execute($sql, $bind);
+        return $this->execute($sql, $bind, true);
     }
 
     // 删
     function delete()
     {
         list($sql, $bind) = $this->deleteSql();
-//        Csn::dump($sql, $bind);
         return $this->execute($sql, $bind);
     }
 
@@ -138,7 +147,6 @@ final class Db extends DbBase
     function update($field = null)
     {
         list($sql, $bind) = $this->updateSql($field);
-//        Csn::dump($sql, $bind);
         return $this->execute($sql, $bind);
     }
 
@@ -146,7 +154,6 @@ final class Db extends DbBase
     function select($rArr = false)
     {
         list($sql, $bind) = $this->selectSql();
-//        Csn::dump($sql, $bind);
         return $this->query($sql, $bind, $rArr);
     }
 
@@ -165,7 +172,7 @@ final class Db extends DbBase
     {
         is_null($field) || $this->field($field);
         $find = $this->find();
-        return is_null($field) ? current($find) ?: null : (key_exists($field, $find) ? $find[$field] : null);
+        return current($find) ?: null;
     }
 
 }

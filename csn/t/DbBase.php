@@ -2,14 +2,14 @@
 
 namespace csn;
 
-class DbBase extends Data
+abstract class DbBase extends Data
 {
 
     // ----------------------------------------------------------------------
     //  指定库名
     // ----------------------------------------------------------------------
 
-    final protected static function db($address, $dbn = '')
+    final protected static function setDbn($address, $dbn = '')
     {
         $linkInfo = self::linkInfo($address);
         $link = $linkInfo['link'];
@@ -43,12 +43,7 @@ class DbBase extends Data
     //  获取节点信息
     // ----------------------------------------------------------------------
 
-    final protected static function node($address)
-    {
-        $links = Config::data('dbs.link');
-        key_exists($address, $links) || Csn::end('数据库连接配置键 ' . $address . ' 不存在');
-        return $links[$address];
-    }
+    abstract protected static function node($address);
 
     // ----------------------------------------------------------------------
     //  连接库名列表
@@ -68,20 +63,20 @@ class DbBase extends Data
     }
 
     // ----------------------------------------------------------------------
-    //  获取表前缀
+    //  获取默认表前缀
     // ----------------------------------------------------------------------
 
-    final protected static function dth($address)
+    final protected static function dthBase($address)
     {
         $node = self::node($address);
         return key_exists('dth', $node) ? $node['dth'] : '';
     }
 
     // ----------------------------------------------------------------------
-    //  获取默认表名
+    //  获取默认库名
     // ----------------------------------------------------------------------
 
-    final protected static function dn($address)
+    final protected static function dbnBase($address)
     {
         return self::node($address)['dbn'];
     }
@@ -98,7 +93,7 @@ class DbBase extends Data
             $desc = new \stdClass();
             $desc->list = new \stdClass();
             $desc->primaryKey = null;
-            foreach (self::inQuery(self::db($address, $dbn), " DESC `$tbn` ") as $v) {
+            foreach (self::inQuery(self::setDbn($address, $dbn), " DESC `$tbn` ") as $v) {
                 $v->Key === 'PRI' && $desc->primaryKey = $v->Field;
                 $desc->list->{$v->Field} = call_user_func(function ($row) {
                     unset($row->Field);
@@ -169,7 +164,7 @@ class DbBase extends Data
     {
         $desc = self::describe();
         $primaryKey = $desc->primaryKey;
-        return is_null($primaryKey) ? Csn::end((self::db() ? '库' . self::db() : '默认库') . '中表' . self::tbn() . '主键不存在') : [$primaryKey, self::parseValue($desc->list->$primaryKey, $id)];
+        return is_null($primaryKey) ? Csn::end((self::setDbn() ? '库' . self::setDbn() : '默认库') . '中表' . self::tbn() . '主键不存在') : [$primaryKey, self::parseValue($desc->list->$primaryKey, $id)];
     }
 
     // ----------------------------------------------------------------------
@@ -199,7 +194,7 @@ class DbBase extends Data
 
     final protected function component()
     {
-        $this->components = new Data();
+        $this->components = Data::instance();
         return $this;
     }
 
@@ -208,18 +203,12 @@ class DbBase extends Data
     // ----------------------------------------------------------------------
 
     // 指定地址及库
-    final function position($address, $dbn)
-    {
-        $this->components->address = $address;
-        $this->components->dbn = $dbn ?: self::dn($address);
-        return $this;
-    }
-
-    // 指定表
-    final function tb($table, $dth = '')
+    final function position($table, $address, $dbn)
     {
         $this->components->table = $table;
-        $this->components->dth = $dth;
+        $this->components->address = $address;
+        $this->components->dth = self::dthBase($address);
+        $this->components->dbn = $dbn ?: self::dbnBase($address);
         return $this;
     }
 
