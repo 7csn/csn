@@ -46,16 +46,7 @@ abstract class Model extends DbBase
     // 获取读数据库地址
     final protected static function slave()
     {
-        return is_null(self::$slave) ? self::$slave = MS::rand(self::reads()) : self::$slave;
-    }
-
-    // ----------------------------------------------------------------------
-    //  获取数据库地址
-    // ----------------------------------------------------------------------
-
-    final protected static function address($read = false)
-    {
-        return ($read && !self::getTrans()) ? self::slave() : self::master();
+        return self::getTrans() ? self::master() : (is_null(self::$slave) ? self::$slave = MS::rand(self::reads()) : self::$slave);
     }
 
     // ----------------------------------------------------------------------
@@ -67,9 +58,68 @@ abstract class Model extends DbBase
         $links = Config::data('mysql.model.link');
         key_exists($address, $links) || Csn::end('数据库连接配置键 ' . $address . ' 不存在');
         $node = $links[$address];
-        $node['dbn'] = $links['dbn'];
-        $node['dth'] = key_exists('dth', $links) ? $links['dth'] : '';
+        $node['dbn'] = self::dbn();
         return $node;
+    }
+
+    // ----------------------------------------------------------------------
+    //  库、表、字段信息
+    // ----------------------------------------------------------------------
+
+    // 库表名数组
+    protected static $names;
+
+    // 初始化库表名
+    final protected static function names()
+    {
+        $class = get_called_class();
+        if (is_null($class::$names)) {
+            strpos($class, 'app\\m\\') === 0 || Csn::end('数据库模型' . $class . '异常');
+            ($name = substr($class, 6)) || Csn::end('数据库模型' . $class . '异常');
+            $arr = array_reverse(explode('\\', $name));
+            $class::$names = ['dbn' => key_exists(1, $arr) ? strtolower($arr[1]) : Config::data('mysql.model.dbn'), 'tbn' => $class::$dth . strtolower($arr[0])];
+        }
+        return $class::$names;
+    }
+
+    // 获取库名
+    final protected static function dbn()
+    {
+        return self::names()['dbn'];
+    }
+
+    // 获取表名
+    final protected static function tbn()
+    {
+        return self::names()['tbn'];
+    }
+
+    // 表前缀
+    protected static $dth = '';
+
+    // 获取表前缀
+    final protected static function dth()
+    {
+        $class = get_called_class();
+        return $class::$dth;
+    }
+
+    // 表结构
+    private static $desc = [];
+
+    // 获取表结构
+    final protected static function desc($tbn)
+    {
+        $dbn = self::dbn();
+        return empty(self::$desc[$dbn][$tbn]) ? self::describe(self::slave(), $dbn, $tbn) : self::$desc[$dbn][$tbn];
+    }
+
+    // 主键及对象锁定
+    final protected static function primaryKey($id)
+    {
+        $desc = self::desc(self::tbn());
+        $primaryKey = $desc->primaryKey;
+        return is_null($primaryKey) ? Csn::end('库 ' . self::dbn() . ' 中表 ' . self::tbn() . ' 主键不存在') : [$primaryKey, self::parseValue($desc->list->$primaryKey, $id)];
     }
 
     // ----------------------------------------------------------------------
@@ -79,55 +129,15 @@ abstract class Model extends DbBase
     // 查询
     final static function query($sql, $bind = [], $rArr = false)
     {
-        $address = self::address(true);
-        $link = self::setDbn($address, self::dbn($address));
+        $link = self::setDbn(self::slave(), self::dbn());
         return self::inQuery($link, $sql, $bind, $rArr);
     }
 
     // 修改
     final static function execute($sql, $bind = [], $insert = false)
     {
-        $link = self::setDbn(self::master(), self::dbn(self::master()));
-        $bool = self::modify($link, $sql, $bind);
-        if ($bool && $insert) $bool = $link->lastInsertId();
-        return $bool;
-    }
-
-    // ----------------------------------------------------------------------
-    //  库、表、字段信息
-    // ----------------------------------------------------------------------
-
-    protected static $dbn;                  // 当前库名
-    protected static $tbn;                  // 当前表名
-    protected static $dth;                  // 当前表前缀
-
-    // 库名、表名、表前缀初始化
-    final protected static function names($address)
-    {
-        $class = get_called_class();
-        is_null($class::$tbn) && call_user_func(function ($class) use ($address) {
-            strpos($class, 'app\\m\\') === 0 || Csn::end('数据库模型' . $class . '异常');
-            ($name = substr($class, 6)) || Csn::end('数据库模型' . $class . '异常');
-            $arr = array_reverse(explode('\\', $name));
-            $class::$dbn = key_exists(1, $arr) ? strtolower($arr[1]) : self::dbnBase($address);
-            is_null($class::$dth) && ($class::$dth = self::dthBase($address));
-            $class::$tbn = $class::$dth . strtolower($arr[0]);
-        }, $class);
-        return $class;
-    }
-
-    // 获取表名
-    final protected static function tbn($address)
-    {
-        $class = self::names($address);
-        return $class::$tbn;
-    }
-
-    // 获取/设置库名
-    final protected static function dbn($address)
-    {
-        $class = self::names($address);
-        return $class::$dbn;
+        $link = self::setDbn(self::master(), self::dbn());
+        return self::modify($link, $sql, $bind, $insert);
     }
 
     // ----------------------------------------------------------------------
@@ -137,16 +147,15 @@ abstract class Model extends DbBase
     // 重置表结构
     final static function truncate()
     {
-        return self::execute(function ($tbn) {
-            return " TRUNCATE TABLE `$tbn` ";
-        });
+        $tbn = self::tbn();
+        return self::execute(" TRUNCATE TABLE `$tbn` ");
     }
 
     // 查询全部行
     final static function all($field = '*', $rArr = false)
     {
         $fields = is_array($field) ? '`' . implode('`,`', $field) . '`' : $field;
-        $tbn = self::tbn(self::address(true));
+        $tbn = self::tbn(self::slave());
         return self::query(" SELECT $fields FROM `$tbn` ", [], $rArr);
     }
 
@@ -178,7 +187,8 @@ abstract class Model extends DbBase
     // 条件
     final static function which($where, $bind = null, $obj = null)
     {
-        return (is_null($obj) ? (get_called_class())::instance() : $obj)->where($where)->bind($bind);
+        $class = get_called_class();
+        return is_null($obj) ? $class::instance()->where($where)->bind($bind) : $obj->where($where)->bind($bind);
     }
 
     // 主键
@@ -194,17 +204,8 @@ abstract class Model extends DbBase
 
     function construct()
     {
-        $this->component();
-        return true;
-    }
-
-    // ----------------------------------------------------------------------
-    //  指定表
-    // ----------------------------------------------------------------------
-
-    final protected function table($address)
-    {
-        return $this->position(self::tbn($address), $address, self::dbn($address));
+        $this->component()->position(self::tbn(), self::dth());
+        return self::single();
     }
 
     // ----------------------------------------------------------------------
@@ -214,28 +215,28 @@ abstract class Model extends DbBase
     // 增
     final function insert($field = null)
     {
-        list($sql, $bind) = $this->table(self::master())->insertSql($field);
+        list($sql, $bind) = $this->insertSql($field);
         return self::execute($sql, $bind, true);
     }
 
     // 删
     final function delete()
     {
-        list($sql, $bind) = $this->table(self::master())->deleteSql();
+        list($sql, $bind) = $this->deleteSql();
         return self::execute($sql, $bind);
     }
 
     // 改
     final function update($field = null)
     {
-        list($sql, $bind) = $this->table(self::master())->updateSql($field);
+        list($sql, $bind) = $this->updateSql($field);
         return self::execute($sql, $bind);
     }
 
     // 查多行
     final function select($rArr = false)
     {
-        list($sql, $bind) = $this->table(self::address(true))->selectSql();
+        list($sql, $bind) = $this->selectSql();
         return self::query($sql, $bind, $rArr);
     }
 
@@ -264,7 +265,7 @@ abstract class Model extends DbBase
     // 收集表单数据
     final function collect()
     {
-        $desc = self::describe();
+        $desc = self::desc(self::tbn());
         $primaryKey = $desc->primaryKey;
         foreach ($desc->list as $k => $v) {
             if ($k === $primaryKey) continue;

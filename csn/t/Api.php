@@ -27,7 +27,7 @@ class Api extends Instance
     //  构造函数
     // ----------------------------------------------------------------------
 
-    function construct($msg = null, $status = 'y')
+    function construct($msg = '', $status = 'y')
     {
         $this->msg = $msg;
         key_exists($status, $this->status) || Csn::end('Api 不支持状态类型：' . $status);

@@ -15,24 +15,13 @@ final class Db extends DbBase
     }
 
     // ----------------------------------------------------------------------
-    //  获取节点信息
-    // ----------------------------------------------------------------------
-
-    final protected static function node($address)
-    {
-        $links = Config::data('mysql.db');
-        key_exists($address, $links) || Csn::end('数据库连接配置键 ' . $address . ' 不存在');
-        return $links[$address];
-    }
-
-    // ----------------------------------------------------------------------
     //  单例对象
     // ----------------------------------------------------------------------
 
     function construct()
     {
         $this->component();
-        return true;
+        return self::single();
     }
 
     // ----------------------------------------------------------------------
@@ -41,15 +30,13 @@ final class Db extends DbBase
 
     private $address;
 
-    protected function address($key = null)
+    protected function address($key)
     {
-        return is_null($key) ? $this->address : call_user_func(function ($obj) use ($key) {
-            $dbs = Config::data('mysql.db');
-            key_exists($key, $dbs) || Csn::end('数据库配置 db 不存在 ' . $key . ' 键');
-            $obj->address = $dbs[$key];
-            $obj->dbn = self::dbnBase($dbs[$key]);
-            return $obj;
-        }, $this);
+        $dbs = Config::data('mysql.db.nodes');
+        key_exists($key, $dbs) || Csn::end('数据库配置 db 不存在 ' . $key . ' 键');
+        $this->address = $dbs[$key];
+        $this->dbn = self::dbnDefault($dbs[$key]);
+        return $this;
     }
 
     // ----------------------------------------------------------------------
@@ -60,8 +47,51 @@ final class Db extends DbBase
 
     function dbn($dbn)
     {
-        $this->dbn = $dbn;
+        $this->dbn = is_null($dbn) ? self::dbnDefault($this->address) : $dbn;
         return $this;
+    }
+
+    // ----------------------------------------------------------------------
+    //  获取节点信息
+    // ----------------------------------------------------------------------
+
+    private static $node = [];
+
+    final protected static function node($address)
+    {
+        return key_exists($address, self::$node) ? self::$node[$address] : call_user_func(function () use ($address) {
+            $links = Config::data('mysql.db.link');
+            key_exists($address, $links) || Csn::end('数据库连接配置键 ' . $address . ' 不存在');
+            return $links[$address];
+        });
+    }
+
+    // ----------------------------------------------------------------------
+    //  获取默认表前缀
+    // ----------------------------------------------------------------------
+
+    final protected static function dthDefault($address)
+    {
+        $node = self::node($address);
+        return key_exists('dth', $node) ? $node['dth'] : '';
+    }
+
+    // ----------------------------------------------------------------------
+    //  获取默认库名
+    // ----------------------------------------------------------------------
+
+    final protected static function dbnDefault($address)
+    {
+        return self::node($address)['dbn'];
+    }
+
+    // ----------------------------------------------------------------------
+    //  表结构
+    // ----------------------------------------------------------------------
+
+    protected static function desc($tbn)
+    {
+        return self::describe(self::instance()->address, self::instance()->dbn, $tbn);
     }
 
     // ----------------------------------------------------------------------
@@ -70,7 +100,9 @@ final class Db extends DbBase
 
     function table($table, $th = null)
     {
-        return $this->position((is_null($th) ? self::dthBase($this->address) : $th) . $table, $this->address, $this->dbn);
+        $dth = self::dthDefault($this->address);
+        $table = (is_null($th) ? $dth : $th) . $table;
+        return $this->position($table, $dth);
     }
 
     // ----------------------------------------------------------------------
@@ -103,7 +135,7 @@ final class Db extends DbBase
 
     function truncate($table, $th = null)
     {
-        is_null($th) && $th = self::dthBase($this->address);
+        is_null($th) && $th = self::dthDefault($this->address);
         return $this->execute(" TRUNCATE TABLE `{$th}{$table}` ");
     }
 

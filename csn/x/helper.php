@@ -4,11 +4,11 @@
 //  Db对象：指定库名、链接
 // ----------------------------------------------------------------------
 
-function db($dbn = '', $key = 0)
+function db($dbn = null, $key = 0)
 {
-    if (func_num_args() < 2 && $dbn !== '') {
+    if (func_num_args() < 2 && !is_null($dbn)) {
         $key = $dbn;
-        $dbn = '';
+        $dbn = null;
     }
     return \csn\Db::link($key)->dbn($dbn);
 }

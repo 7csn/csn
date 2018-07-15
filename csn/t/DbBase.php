@@ -40,12 +40,6 @@ abstract class DbBase extends Data
     }
 
     // ----------------------------------------------------------------------
-    //  获取节点信息
-    // ----------------------------------------------------------------------
-
-    abstract protected static function node($address);
-
-    // ----------------------------------------------------------------------
     //  连接库名列表
     // ----------------------------------------------------------------------
 
@@ -60,25 +54,6 @@ abstract class DbBase extends Data
             }
             return $dbNames;
         });
-    }
-
-    // ----------------------------------------------------------------------
-    //  获取默认表前缀
-    // ----------------------------------------------------------------------
-
-    final protected static function dthBase($address)
-    {
-        $node = self::node($address);
-        return key_exists('dth', $node) ? $node['dth'] : '';
-    }
-
-    // ----------------------------------------------------------------------
-    //  获取默认库名
-    // ----------------------------------------------------------------------
-
-    final protected static function dbnBase($address)
-    {
-        return self::node($address)['dbn'];
     }
 
     // ----------------------------------------------------------------------
@@ -105,37 +80,8 @@ abstract class DbBase extends Data
     }
 
     // ----------------------------------------------------------------------
-    //  表SQL封装：查询、增删改
-    // ----------------------------------------------------------------------
-
-    final protected static function inQuery($link, $sql, $bind = [], $rArr = false)
-    {
-        $sth = $link->prepare($sql);
-        $sth->execute($bind);
-        $sth->setFetchMode($rArr ? \PDO::FETCH_ASSOC : \PDO::FETCH_OBJ);
-        $res = [];
-        while ($v = $sth->fetch()) {
-            $res[] = $v;
-        }
-        $sth = null;
-        return $res;
-    }
-
-    final protected static function modify($link, $sql, $bind = [])
-    {
-        return $link->prepare($sql)->execute($bind);
-    }
-
-    // ----------------------------------------------------------------------
     //  表结构
     // ----------------------------------------------------------------------
-
-    // 查询字段结构
-    final protected static function fieldStructure($field)
-    {
-        $desc = self::describe();
-        return key_exists($field, $desc) ? $desc[$field] : null;
-    }
 
     // 字段值处理
     final protected static function parseValue($structure, $val = null)
@@ -159,12 +105,29 @@ abstract class DbBase extends Data
         return (!$val && !is_null($structure->Default)) ? $structure->Default : $val;
     }
 
-    // 主键及对象锁定
-    final protected static function primaryKey($id)
+
+    // ----------------------------------------------------------------------
+    //  表SQL封装：查询、增删改
+    // ----------------------------------------------------------------------
+
+    final static function inQuery($link, $sql, $bind = [], $rArr = false)
     {
-        $desc = self::describe();
-        $primaryKey = $desc->primaryKey;
-        return is_null($primaryKey) ? Csn::end((self::setDbn() ? '库' . self::setDbn() : '默认库') . '中表' . self::tbn() . '主键不存在') : [$primaryKey, self::parseValue($desc->list->$primaryKey, $id)];
+        $sth = $link->prepare($sql);
+        $sth->execute($bind);
+        $sth->setFetchMode($rArr ? \PDO::FETCH_ASSOC : \PDO::FETCH_OBJ);
+        $res = [];
+        while ($v = $sth->fetch()) {
+            $res[] = $v;
+        }
+        $sth = null;
+        return $res;
+    }
+
+    final static function modify($link, $sql, $bind = [], $insert = false)
+    {
+        $bool = $link->prepare($sql)->execute($bind);
+        $insert && $bool = $bool ? $link->lastInsertId() : 0;
+        return $bool;
     }
 
     // ----------------------------------------------------------------------
@@ -202,13 +165,11 @@ abstract class DbBase extends Data
     //  SQL因素
     // ----------------------------------------------------------------------
 
-    // 指定地址及库
-    final function position($table, $address, $dbn)
+    // 主表及默认表前缀
+    final function position($table, $dth)
     {
         $this->components->table = $table;
-        $this->components->address = $address;
-        $this->components->dth = self::dthBase($address);
-        $this->components->dbn = $dbn ?: self::dbnBase($address);
+        $this->components->dth = $dth;
         return $this;
     }
 
@@ -385,7 +346,7 @@ abstract class DbBase extends Data
         // 获取所有表结构
         $tbInfos = [];
         foreach ($tbArr as $k => $v) {
-            $tbInfos[is_null($v) ? $k : $v] = self::describe($this->components->address, $this->components->dbn, $k);
+            $tbInfos[is_null($v) ? $k : $v] = self::desc($k);
         }
         // 二维字段数组
         $fieldArr = [];
