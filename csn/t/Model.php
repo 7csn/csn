@@ -53,13 +53,15 @@ abstract class Model extends DbBase
     //  获取节点信息
     // ----------------------------------------------------------------------
 
+    private static $node = [];
+
     final protected static function node($address)
     {
-        $links = Config::data('mysql.model.link');
-        key_exists($address, $links) || Csn::end('数据库连接配置键 ' . $address . ' 不存在');
-        $node = $links[$address];
-        $node['dbn'] = self::dbn();
-        return $node;
+        return key_exists($address, self::$node) ? self::$node[$address] : call_user_func(function () use ($address) {
+            $links = Config::data('mysql.model.link');
+            key_exists($address, $links) || Csn::end('数据库 model 连接配置地址 ' . $address . ' 不存在');
+            return $links[$address];
+        });
     }
 
     // ----------------------------------------------------------------------
@@ -129,15 +131,13 @@ abstract class Model extends DbBase
     // 查询
     final static function query($sql, $bind = [], $rArr = false)
     {
-        $link = self::setDbn(self::slave(), self::dbn());
-        return self::inQuery($link, $sql, $bind, $rArr);
+        return self::inQuery(self::setDbn(self::slave(), self::dbn()), $sql, $bind, $rArr);
     }
 
     // 修改
     final static function execute($sql, $bind = [], $insert = false)
     {
-        $link = self::setDbn(self::master(), self::dbn());
-        return self::modify($link, $sql, $bind, $insert);
+        return self::modify(self::setDbn(self::master(), self::dbn()), $sql, $bind, $insert);
     }
 
     // ----------------------------------------------------------------------

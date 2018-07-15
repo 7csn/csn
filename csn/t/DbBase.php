@@ -9,15 +9,14 @@ abstract class DbBase extends Data
     //  指定库名
     // ----------------------------------------------------------------------
 
-    final protected static function setDbn($address, $dbn = '')
+    final protected static function setDbn($address, $dbn)
     {
         $linkInfo = self::linkInfo($address);
         $link = $linkInfo['link'];
-        $dbn || $dbn = $linkInfo['dbn'];
-        if ($dbn !== $linkInfo['dbnNow']) {
+        if ($dbn !== $linkInfo['dbn']) {
             in_array($dbn, self::dbName($address)) || Csn::end('服务器 ' . $address . ' 不存在数据库 ' . $dbn);
             $link->query(" USE `$dbn` ");
-            self::$linkInfo[$address]['dbnNow'] = $dbn;
+            self::$linkInfo[$address]['dbn'] = $dbn;
         }
         return $link;
     }
@@ -33,9 +32,10 @@ abstract class DbBase extends Data
     final protected static function linkInfo($address)
     {
         return key_exists($address, self::$linkInfo) ? self::$linkInfo[$address] : self::$linkInfo[$address] = call_user_func(function () use ($address) {
-            $node = self::node($address);
+            $class = get_called_class();
+            $node = $class::node($address);
             list($host, $port) = explode(':', $address);
-            return ['link' => new \PDO("mysql:host=$host;port=$port", $node['du'], $node['dp']), 'dbn' => $node['dbn'], 'dbnNow' => null];
+            return ['link' => new \PDO("mysql:host=$host;port=$port", $node['du'], $node['dp']), 'dbn' => null];
         });
     }
 
@@ -62,7 +62,7 @@ abstract class DbBase extends Data
 
     private static $describe = [];
 
-    protected static function describe($address, $dbn, $tbn)
+    final protected static function describe($address, $dbn, $tbn)
     {
         return empty(self::$describe[$address][$dbn][$tbn]) ? self::$describe[$address][$dbn][$tbn] = call_user_func(function () use ($address, $dbn, $tbn) {
             $desc = new \stdClass();
@@ -80,10 +80,9 @@ abstract class DbBase extends Data
     }
 
     // ----------------------------------------------------------------------
-    //  表结构
+    //  字段值处理
     // ----------------------------------------------------------------------
 
-    // 字段值处理
     final protected static function parseValue($structure, $val = null)
     {
         switch (explode('(', $structure->Type)[0]) {
@@ -105,7 +104,6 @@ abstract class DbBase extends Data
         return (!$val && !is_null($structure->Default)) ? $structure->Default : $val;
     }
 
-
     // ----------------------------------------------------------------------
     //  表SQL封装：查询、增删改
     // ----------------------------------------------------------------------
@@ -126,8 +124,7 @@ abstract class DbBase extends Data
     final static function modify($link, $sql, $bind = [], $insert = false)
     {
         $bool = $link->prepare($sql)->execute($bind);
-        $insert && $bool = $bool ? $link->lastInsertId() : 0;
-        return $bool;
+        return $insert ? $bool ? $link->lastInsertId() : 0 : $bool;
     }
 
     // ----------------------------------------------------------------------
@@ -287,13 +284,16 @@ abstract class DbBase extends Data
             $values .= '(' . rtrim($value, ',') . '),';
         }
         $sql = 'INSERT INTO' . $tables . ' (`' . implode('`,`', array_keys($fields[0])) . '`) VALUES ' . rtrim($values, ',');
+        $this->components->clear();
         return [$sql, $bind];
     }
 
     final function deleteSql()
     {
         $sql = 'DELETE FROM' . $this->parseTable() . $this->parseSql('on') . $this->parseWhere() . $this->parseSql('group') . $this->parseSql('order') . $this->parseSql('limit');
-        return [$sql, $this->components->bind];
+        $bind = $this->components->bind;
+        $this->components->clear();
+        return [$sql, $bind];
     }
 
     final function updateSql($field = null)
@@ -310,13 +310,16 @@ abstract class DbBase extends Data
         }
         $sets = implode(',', $set);
         $sql = 'UPDATE' . $tables . $this->parseSql('on') . ' SET ' . $sets . $this->parseWhere() . $this->parseSql('group') . $this->parseSql('order') . $this->parseSql('limit');
+        $this->components->clear();
         return [$sql, $bind];
     }
 
     final function selectSql()
     {
         $sql = 'SELECT' . $this->parseSql('field') . ' FROM' . $this->parseTable() . $this->parseSql('on') . $this->parseWhere() . $this->parseHaving() . $this->parseSql('group') . $this->parseSql('order') . $this->parseSql('limit');
-        return [$sql, $this->components->bind];
+        $bind = $this->components->bind;
+        $this->components->clear();
+        return [$sql, $bind];
     }
 
     // ----------------------------------------------------------------------
@@ -345,8 +348,9 @@ abstract class DbBase extends Data
         $tbArr = $this->components->table;
         // 获取所有表结构
         $tbInfos = [];
+        $class = get_called_class();
         foreach ($tbArr as $k => $v) {
-            $tbInfos[is_null($v) ? $k : $v] = self::desc($k);
+            $tbInfos[is_null($v) ? $k : $v] = $class::desc($k);
         }
         // 二维字段数组
         $fieldArr = [];

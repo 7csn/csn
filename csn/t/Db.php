@@ -61,7 +61,7 @@ final class Db extends DbBase
     {
         return key_exists($address, self::$node) ? self::$node[$address] : call_user_func(function () use ($address) {
             $links = Config::data('mysql.db.link');
-            key_exists($address, $links) || Csn::end('数据库连接配置键 ' . $address . ' 不存在');
+            key_exists($address, $links) || Csn::end('数据库 db 连接配置地址 ' . $address . ' 不存在');
             return $links[$address];
         });
     }
@@ -112,21 +112,13 @@ final class Db extends DbBase
     // 增删改
     function execute($sql, $bind = null, $insert = false)
     {
-//        Csn::dump($sql, $bind);
-        $link = self::setDbn($this->address, $this->dbn);
-        $bool = self::modify($link, $sql, $bind);
-        $this->components->clear();
-        if ($bool && $insert) $bool = $link->lastInsertId();
-        return $bool;
+        return self::modify(self::setDbn($this->address, $this->dbn), $sql, $bind, $insert);
     }
 
     // 查询
     function query($sql, $bind = null, $rArr = false)
     {
-//        Csn::dump($sql, $bind);
-        $res = self::inQuery(self::setDbn($this->address, $this->dbn), $sql, $bind, $rArr);
-        $this->components->clear();
-        return $res;
+        return self::inQuery(self::setDbn($this->address, $this->dbn), $sql, $bind, $rArr);
     }
 
     // ----------------------------------------------------------------------
