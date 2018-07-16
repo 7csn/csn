@@ -128,22 +128,48 @@ abstract class DbBase extends Data
     }
 
     // ----------------------------------------------------------------------
-    //  事务状态
+    //  事务处理
     // ----------------------------------------------------------------------
 
-    // 是否处于事务
-    private static $transaction = false;
+    // 事务连接
+    private static $transLink;
+
+    // 事务成功回调
+    private static $transSuccess;
+
+    // 事务失败回调
+    private static $transFail;
 
     // 获取事务状态
     final static function getTrans()
     {
-        return self::$transaction;
+        return !is_null(self::$transLink);
     }
 
-    // 修改事务状态
-    final static function setTrans($status = false)
+    // 开始事务
+    final static function beginTrans($link, $action, $success, $fail)
     {
-        self::$transaction = $status;
+        $link->beginTransaction();
+        self::$transLink = $link;
+        self::$transSuccess = $success;
+        self::$transFail = $fail;
+        $b = $action->run();
+        return self::transEnd($b);
+    }
+
+    // 结束事务
+    final static function transEnd($status = false)
+    {
+        if (is_null(self::$transLink)) return;
+        if ($status) {
+            self::$transLink->commit();
+            $res = self::$transSuccess->run();
+        } else {
+            self::$transLink->rollBack();
+            $res = self::$transFail->run();
+        }
+        self::$transLink = null;
+        return $res;
     }
 
     // ----------------------------------------------------------------------

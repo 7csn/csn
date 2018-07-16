@@ -135,18 +135,9 @@ final class Db extends DbBase
     //  事务处理
     // ----------------------------------------------------------------------
 
-    function transaction()
+    function transaction($success, $fail)
     {
-        $pdo = self::$link;
-        $pdo->beginTransaction();
-        DbBase::setTrans(true);
-        $args = func_get_args();
-        $fn = $args[0];
-        $args[0] = $pdo;
-        $b = call_user_func_array($fn, $args);
-        $pdo->{$b ? 'rollBack' : 'commit'}();
-        DbBase::setTrans();
-        return $b;
+        return DbBase::beginTrans(self::setDbn($this->address, $this->dbn), $success, $fail);
     }
 
     // ----------------------------------------------------------------------
