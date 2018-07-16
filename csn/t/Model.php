@@ -168,16 +168,9 @@ abstract class Model extends DbBase
     }
 
     // 事务
-    final static function transaction($func)
+    final static function transaction($action, $success, $fail)
     {
-        $link = self::linkInfo(self::master());
-        $link->beginTransaction();
-        self::setTrans(true);
-        echo '1111111';
-        $link->{($res = call_user_func($func, $link)) ? 'rollBack' : 'commit'}();
-        self::setTrans();
-        echo '2222222';
-        return $res;
+        return DbBase::beginTrans(self::setDbn(self::master(), self::dbn()), $action, $success, $fail);
     }
 
     // ----------------------------------------------------------------------
