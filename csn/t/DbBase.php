@@ -92,16 +92,20 @@ abstract class DbBase extends Data
             case 'longtext':
             case 'mediumtext':
             case 'text':
-                is_null($val) ? '' : (string)$val;
+                $val = is_null($val) ? $structure->Default : (string)$val;
                 break;
+            case 'tinyint':
+            case 'smallint':
+            case 'mediumint':
             case 'int':
-                is_null($val) ? 0 : floatval($val);
+            case 'bigint':
+                $val = is_null($val) ? $structure->Default : (int)$val;
                 break;
             default:
-                is_null($val) ? 0 : floatval($val);
+                $val = is_null($val) ? $structure->Default : floatval($val);
                 break;
         }
-        return (!$val && !is_null($structure->Default)) ? $structure->Default : $val;
+        return (is_null($val) && !is_null($structure->Default)) ? $structure->Default : $val;
     }
 
     // ----------------------------------------------------------------------
@@ -134,9 +138,6 @@ abstract class DbBase extends Data
     // 事务连接
     private static $transLink;
 
-    // 事务成功回调
-    private static $transSuccess;
-
     // 事务失败回调
     private static $transFail;
 
@@ -147,28 +148,26 @@ abstract class DbBase extends Data
     }
 
     // 开始事务
-    final static function beginTrans($link, $action, $success, $fail)
+    final static function beginTrans($link, $action, $fail)
     {
         $link->beginTransaction();
         self::$transLink = $link;
-        self::$transSuccess = $success;
         self::$transFail = $fail;
-        $b = $action->run();
-        return self::transEnd($b);
+        return self::transEnd($action->run());
     }
 
     // 结束事务
-    final static function transEnd($status = false)
+    final static function transEnd($res = false)
     {
         if (is_null(self::$transLink)) return;
-        if ($status) {
-            self::$transLink->commit();
-            $res = self::$transSuccess->run();
-        } else {
+        if ($res === false) {
             self::$transLink->rollBack();
             $res = self::$transFail->run();
+        } else {
+            self::$transLink->commit();
         }
         self::$transLink = null;
+        self::$transFail = null;
         return $res;
     }
 
@@ -381,6 +380,7 @@ abstract class DbBase extends Data
         // 二维字段数组
         $fieldArr = [];
         $fields = is_array(current($field = $this->components->field)) ? $field : [$field];
+//        Csn::dump($fields);
         foreach ($fields as $field) {
             $arr = [];
             foreach ($tbInfos as $alias => $tbInfo) {

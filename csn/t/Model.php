@@ -69,19 +69,19 @@ abstract class Model extends DbBase
     // ----------------------------------------------------------------------
 
     // 库表名数组
-    protected static $names;
+    protected static $names = [];
 
     // 初始化库表名
     final protected static function names()
     {
         $class = get_called_class();
-        if (is_null($class::$names)) {
+        if (!key_exists($class, self::$names)) {
             strpos($class, 'app\\m\\') === 0 || Csn::end('数据库模型' . $class . '异常');
             ($name = substr($class, 6)) || Csn::end('数据库模型' . $class . '异常');
             $arr = array_reverse(explode('\\', $name));
-            $class::$names = ['dbn' => key_exists(1, $arr) ? strtolower($arr[1]) : Config::data('mysql.model.dbn'), 'tbn' => $class::$dth . strtolower($arr[0])];
+            self::$names[$class] = ['dbn' => key_exists(1, $arr) ? strtolower($arr[1]) : Config::data('mysql.model.dbn'), 'tbn' => $class::$dth . strtolower($arr[0])];
         }
-        return $class::$names;
+        return self::$names[$class];
     }
 
     // 获取库名
@@ -168,9 +168,9 @@ abstract class Model extends DbBase
     }
 
     // 事务
-    final static function transaction($action, $success, $fail)
+    final static function transaction($action, $error)
     {
-        return DbBase::beginTrans(self::setDbn(self::master(), self::dbn()), $action, $success, $fail);
+        return DbBase::beginTrans(self::setDbn(self::master(), self::dbn()), $action, $error);
     }
 
     // ----------------------------------------------------------------------
@@ -197,7 +197,7 @@ abstract class Model extends DbBase
 
     function construct()
     {
-        $this->component()->position(self::tbn(), self::dth());
+        $this->component();
         return self::single();
     }
 
@@ -208,28 +208,28 @@ abstract class Model extends DbBase
     // 增
     final function insert($field = null)
     {
-        list($sql, $bind) = $this->insertSql($field);
+        list($sql, $bind) = $this->position(self::tbn(), self::dth())->insertSql($field);
         return self::execute($sql, $bind, true);
     }
 
     // 删
     final function delete()
     {
-        list($sql, $bind) = $this->deleteSql();
+        list($sql, $bind) = $this->position(self::tbn(), self::dth())->deleteSql();
         return self::execute($sql, $bind);
     }
 
     // 改
     final function update($field = null)
     {
-        list($sql, $bind) = $this->updateSql($field);
+        list($sql, $bind) = $this->position(self::tbn(), self::dth())->updateSql($field);
         return self::execute($sql, $bind);
     }
 
     // 查多行
     final function select($rArr = false)
     {
-        list($sql, $bind) = $this->selectSql();
+        list($sql, $bind) = $this->position(self::tbn(), self::dth())->selectSql();
         return self::query($sql, $bind, $rArr);
     }
 

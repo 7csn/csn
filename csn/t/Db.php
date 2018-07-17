@@ -135,9 +135,9 @@ final class Db extends DbBase
     //  事务处理
     // ----------------------------------------------------------------------
 
-    function transaction($action, $success, $fail)
+    function transaction($action, $error)
     {
-        return DbBase::beginTrans(self::setDbn($this->address, $this->dbn), $action, $success, $fail);
+        return DbBase::beginTrans(self::setDbn($this->address, $this->dbn), $action, $error);
     }
 
     // ----------------------------------------------------------------------

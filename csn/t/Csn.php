@@ -228,11 +228,11 @@ final class Csn
     }
 
     // 生产模式显示信息
-    static function close($info, $url = '', $time = 0)
+    static function close($info, $url = false, $time = 0)
     {
         self::table();
         $info = "<table class='table'><tr/><tr><td><div class='div'>{$info}</div></td></tr><tr/><tr/></table>";
-        echo $url ? $info : "<meta http-equiv='refresh' content = '$time;url=\"{$url}\"'>{$info}<script>setTimeout(function() { window.location.href = '$url'; }, $time);</script>";
+        echo $url ? "<meta http-equiv='refresh' content = '$time;url=\"{$url}\"'>{$info}<script>setTimeout(function() { window.location.href = '$url'; }, $time);</script>" : $info;
         die;
     }
 

@@ -235,9 +235,10 @@ final class View extends Instance
     // if模板
     protected static function compileIf(&$content)
     {
-        $content = preg_replace('/@if\s*\((.+?)\)(.*?)@endif/us', '<?php if (\1) { ?>\2<?php } ?>', $content);
+        $content = preg_replace('/@if\s*\((.+?)\)/us', '<?php if (\1) { ?>', $content);
         $content = preg_replace('/@elseif\s*\((.+?)\)/', '<?php } elseif (\1) { ?>', $content);
         $content = preg_replace('/@else/', '<?php } else { ?>', $content);
+        $content = preg_replace('/@endif/', '<?php } ?>', $content);
     }
 
     // unless模板
@@ -246,19 +247,19 @@ final class View extends Instance
         $content = preg_replace('/@unless\s*\((.+?)\)(.*?)@endunless/us', '<?php if (\1) { ?>\2<?php } ?>', $content);
     }
 
-    // if模板
+    // for模板
     protected static function compileFor(&$content)
     {
         $content = preg_replace('/@for\s*\((.+?)\)(.*?)@endfor/us', '<?php for (\1) { ?>\2<?php } ?>', $content);
     }
 
-    // if模板
+    // foreach模板
     protected static function compileForeach(&$content)
     {
-        $content = preg_replace('/@foreach\s*\((.+?)\)(.*?)@endforeach/us', '<?php foreach (!(\1)) { ?>\2<?php } ?>', $content);
+        $content = preg_replace('/@foreach\s*\((.+?)\)(.*?)@endforeach/us', '<?php foreach (\1) { ?>\2<?php } ?>', $content);
     }
 
-    // if模板
+    // forelse模板
     protected static function compileForelse(&$content)
     {
         $content = preg_replace('/@forelse\s*\(((.+?) as .+?)\)(.*?)@empty(.*?)@endforelse/us', '<?php if (empty(\2)) { ?>\4<?php } else { foreach (\1) { ?>\3<?php } } ?>', $content);
