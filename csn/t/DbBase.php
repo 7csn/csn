@@ -92,7 +92,7 @@ abstract class DbBase extends Data
             case 'longtext':
             case 'mediumtext':
             case 'text':
-                $val = is_null($val) ? $structure->Default : (string)$val;
+                $val = is_null($val) ? $structure->Default : (is_array($val) ? json_encode($val) : (string)$val);
                 break;
             case 'tinyint':
             case 'smallint':
@@ -157,18 +157,18 @@ abstract class DbBase extends Data
     }
 
     // 结束事务
-    final static function transEnd($res = false)
+    final static function transEnd($func = false)
     {
         if (is_null(self::$transLink)) return;
-        if ($res === false) {
+        if ($func === false) {
             self::$transLink->rollBack();
-            $res = self::$transFail->run();
+            $func = self::$transFail;
+            self::$transFail = null;
         } else {
             self::$transLink->commit();
         }
         self::$transLink = null;
-        self::$transFail = null;
-        return $res;
+        return $func->run();
     }
 
     // ----------------------------------------------------------------------
@@ -257,10 +257,24 @@ abstract class DbBase extends Data
         return $this;
     }
 
-    // 字段
+    // 字段：查
     final function field($field, $bind = null)
     {
         empty($field) || ($this->bind($bind)->components->field = is_array($field) ? $field : explode(',', $field));
+        return $this;
+    }
+
+    // 字段：改
+    final function set($set, $bind = null)
+    {
+        empty($set) || ($this->bind($bind)->components->set = $set);
+        return $this;
+    }
+
+    // 字段：增
+    final function values($values)
+    {
+        empty($values) || $this->components->values = $values;
         return $this;
     }
 
@@ -293,22 +307,11 @@ abstract class DbBase extends Data
     //  获取SQL：增、删、改、查
     // ----------------------------------------------------------------------
 
-    final function insertSql($field = null)
+    final function insertSql($values = null)
     {
-        $this->field($field);
-        $tables = $this->parseTable();
-        $fields = $this->parseField();
-        $values = '';
-        $bind = [];
-        foreach ($fields as $k => $v) {
-            $value = '';
-            foreach ($v as $kk => $vv) {
-                $value .= ':' . $kk . '__' . $k . ',';
-                $bind[$kk . '__' . $k] = is_array($vv) ? serialize($vv) : $vv;
-            }
-            $values .= '(' . rtrim($value, ',') . '),';
-        }
-        $sql = 'INSERT INTO' . $tables . ' (`' . implode('`,`', array_keys($fields[0])) . '`) VALUES ' . rtrim($values, ',');
+        $this->values($values);
+        $sql = 'INSERT INTO' . $this->parseTable() . $this->parseValues();
+        $bind = $this->components->bind;
         $this->components->clear();
         return [$sql, $bind];
     }
@@ -321,20 +324,11 @@ abstract class DbBase extends Data
         return [$sql, $bind];
     }
 
-    final function updateSql($field = null)
+    final function updateSql($field = null, $bind = null)
     {
-        $this->field($field);
+        $this->set($field, $bind);
+        $sql = 'UPDATE' . $this->parseTable() . $this->parseSql('on') . $this->parseSet() . $this->parseWhere() . $this->parseSql('group') . $this->parseSql('order') . $this->parseSql('limit');
         $bind = $this->components->bind;
-        $set = [];
-        $tables = $this->parseTable();
-        foreach (current($this->parseField()) as $k => $v) {
-            $lock = join('__', array_reverse(explode('.', $k)));
-            $key = strpos($k, '.') === false ? "`$k`" : $this->unquote($k);
-            $set[] = "$key = :{$lock}__";
-            $bind[":{$lock}__"] = is_array($v) ? serialize($v) : $v;
-        }
-        $sets = implode(',', $set);
-        $sql = 'UPDATE' . $tables . $this->parseSql('on') . ' SET ' . $sets . $this->parseWhere() . $this->parseSql('group') . $this->parseSql('order') . $this->parseSql('limit');
         $this->components->clear();
         return [$sql, $bind];
     }
@@ -352,53 +346,98 @@ abstract class DbBase extends Data
     // ----------------------------------------------------------------------
 
     // 表处理
-    final protected function parseTable()
+    final protected function parseTable($rArr = false)
     {
-        $tbs = " `{$this->components->table}`" . ($this->components->alias ? " AS `{$this->components->alias}`" : "");
-        $tbArr = [$this->components->table => $this->components->alias];
-        $joins = $this->components->join;
-        if (is_array($joins)) {
-            foreach ($joins as $join) {
-                $tbs .= " {$join[0]} JOIN `{$join[1]}`" . (is_null($join[2]) ? '' : " AS `{$join[2]}`");
-                $tbArr[$join[1]] = $join[2];
+        if (is_null($this->components->tableArr) && is_null($this->components->tableStr)) {
+            $tableStr = " `{$this->components->table}`" . ($this->components->alias ? " AS `{$this->components->alias}`" : "");
+            $tableArr = [$this->components->table => $this->components->alias];
+            $joins = $this->components->join;
+            if (is_array($joins)) {
+                foreach ($joins as $join) {
+                    $tableStr .= " {$join[0]} JOIN `{$join[1]}`" . (is_null($join[2]) ? '' : " AS `{$join[2]}`");
+                    $tableArr[$join[1]] = $join[2];
+                }
             }
+            $this->components->tableArr = $tableArr;
+            $this->components->tableStr = $tableStr;
         }
-        $this->components->table = $tbArr;
-        return $tbs;
+        return $rArr ? $this->components->tableArr : $this->components->tableStr;
     }
 
-    // 字段数组处理
-    final protected function parseField()
+    // 获取所有表结构
+    final protected function tableDesc()
     {
-        $tbArr = $this->components->table;
-        // 获取所有表结构
-        $tbInfos = [];
-        $class = get_called_class();
-        foreach ($tbArr as $k => $v) {
-            $tbInfos[is_null($v) ? $k : $v] = $class::desc($k);
+        if (is_null($this->components->tableDesc)) {
+            $tableDesc = [];
+            $class = get_called_class();
+            foreach ($this->parseTable(true) as $table => $alias) {
+                $tableDesc[is_null($alias) ? $table : $alias] = $class::desc($table);
+            }
+            $this->components->tableDesc = $tableDesc;
         }
-        // 二维字段数组
-        $fieldArr = [];
-        $fields = is_array(current($field = $this->components->field)) ? $field : [$field];
-//        Csn::dump($fields);
-        foreach ($fields as $field) {
-            $arr = [];
-            foreach ($tbInfos as $alias => $tbInfo) {
-                foreach ($tbInfo->list as $k => $v) {
-                    if ($v->Extra === 'auto_increment') continue;
-                    if (key_exists($k, $field)) {
-                        $arr[$k] = self::parseValue($v, $field[$k]);
-                    } else {
-                        $key = $alias . '.' . $k;
-                        if (key_exists($key, $field)) {
-                            $arr[$key] = self::parseValue($v, $field[$key]);
-                        }
+        return $this->components->tableDesc;
+    }
+
+    // 字段处理：改
+    final protected function parseSet()
+    {
+        // 过滤直接条件
+        if (!is_array($set = $this->components->set)) return ' SET ' . $set;
+        $bind = $this->components->bind;
+        $setArr = [];
+        foreach ($this->tableDesc() as $tbn => $desc) {
+            foreach ($desc->list as $name => $field) {
+                // 过滤自增字段
+                if ($field->Extra === 'auto_increment') continue;
+                if (key_exists($name, $set)) {   // 无别名表
+                    $setArr[] = "`$name` = :{$name}__";
+                    $bind[":{$name}__"] = self::parseValue($field, $set[$name]);
+                } else {
+                    if (key_exists($key = $tbn . '.' . $name, $set)) {    // 别名表
+                        $setArr[] = "`$tbn`.`$name` = :{$name}__{$tbn}__";
+                        $bind[":{$name}__{$tbn}__"] = self::parseValue($field, $set[$name]);
                     }
                 }
             }
-            $fieldArr[] = $arr;
         }
-        return $fieldArr;
+        // 更新绑定数据
+        $this->components->bind = $bind;
+        // 返回修改字符串
+        return ' SET ' . join(',', $setArr);
+    }
+
+    // 字段处理：增
+    final protected function parseValues()
+    {
+        // 表结构
+        $tableDesc = $this->tableDesc();
+        // 二维数组：批处理
+        $values = is_array(current($values = $this->components->values)) ? $values : [$values];
+        // 绑定数组
+        $bind = [];
+        // 字段名称数组
+        $valueBefore = [];
+        // 字段绑定名数组
+        $valueAfter = [];
+        for ($i = 0, $c = count($values); $i < $c; $i++) {
+            // 单次绑定名数组
+            $after = [];
+            $value = $values[$i];
+            foreach ($tableDesc as $tbn => $desc) {
+                foreach ($desc->list as $name => $fieldObj) {
+                    // 过滤自增字段
+                    if ($fieldObj->Extra === 'auto_increment') continue;
+                    // 过滤不存在字段
+                    if (!key_exists($name, $value)) continue;
+                    $i > 0 || $valueBefore[] = "`$name`";
+                    $after[] = ":{$name}__$i";
+                    $bind[":{$name}__$i"] = self::parseValue($fieldObj, $value[$name]);
+                }
+            }
+            $valueAfter[] = '(' . join(',', $after) . ')';
+        }
+        $this->components->bind = $bind;
+        return ' (' . join(',', $valueBefore) . ') VALUES ' . join(',', $valueAfter);
     }
 
     // 条件数组处理

@@ -188,7 +188,7 @@ abstract class Model extends DbBase
     final static function assign($id, $obj = null)
     {
         list($primaryKey, $id) = self::primaryKey($id);
-        return self::which(" `$primaryKey` = :id ", [':id' => $id], $obj);
+        return self::which("`$primaryKey` = :id", [':id' => $id], $obj);
     }
 
     // ----------------------------------------------------------------------
@@ -220,9 +220,9 @@ abstract class Model extends DbBase
     }
 
     // 改
-    final function update($field = null)
+    final function update($field = null, $bind = null)
     {
-        list($sql, $bind) = $this->position(self::tbn(), self::dth())->updateSql($field);
+        list($sql, $bind) = $this->position(self::tbn(), self::dth())->updateSql($field, $bind);
         return self::execute($sql, $bind);
     }
 

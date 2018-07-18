@@ -110,7 +110,7 @@ final class Csn
     // 错误处理
     static function error($code, $msg, $file, $line)
     {
-        DbBase::getTrans() ? DbBase::transEnd() : self::closure($code, $msg, $file, $line);
+        DbBase::getTrans() ? DbBase::transEnd(false)->run() : self::closure($code, $msg, $file, $line);
     }
 
     // 致命错误处理
@@ -239,7 +239,7 @@ final class Csn
     // 根据模式报错
     static function end($msg)
     {
-        Request::instance()->isAjax() ? Api::instance('n', '非法调用')->run() : (T_S ? Csn::show($msg) : Csn::close('页面不存在'));
+        Request::instance()->isAjax() ? Api::instance('非法调用', 'n')->run() : (T_S ? Csn::show($msg) : Csn::close('页面不存在'));
     }
 
 }
