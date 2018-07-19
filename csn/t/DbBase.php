@@ -112,8 +112,16 @@ abstract class DbBase extends Data
     //  表SQL封装：查询、增删改
     // ----------------------------------------------------------------------
 
+    private static $lastSql;
+
+    final static function lastSql()
+    {
+        return self::$lastSql;
+    }
+
     final static function inQuery($link, $sql, $bind = [], $rArr = false)
     {
+        self::$lastSql = [$sql, $bind];
         $sth = $link->prepare($sql);
         $sth->execute($bind);
         $sth->setFetchMode($rArr ? \PDO::FETCH_ASSOC : \PDO::FETCH_OBJ);
@@ -127,6 +135,7 @@ abstract class DbBase extends Data
 
     final static function modify($link, $sql, $bind = [], $insert = false)
     {
+        self::$lastSql = [$sql, $bind];
         $bool = $link->prepare($sql)->execute($bind);
         return $insert ? $bool ? $link->lastInsertId() : 0 : $bool;
     }
@@ -150,25 +159,27 @@ abstract class DbBase extends Data
     // 开始事务
     final static function beginTrans($link, $action, $fail)
     {
+        $action instanceof Course || $action instanceof Api || Csn::end('事务函数须为 Course 或 Api 对象');
+        $fail instanceof Course || $fail instanceof Api || Csn::end('事务故障函数须为 Course 或 Api 对象');
         $link->beginTransaction();
         self::$transLink = $link;
         self::$transFail = $fail;
-        return self::transEnd($action->run());
+        $func = $action->run();
+        self::$transLink->commit();
+        self::$transLink = null;
+        self::$transFail = null;
+        return $func;
     }
 
     // 结束事务
-    final static function transEnd($func = false)
+    final static function transEnd()
     {
         if (is_null(self::$transLink)) return;
-        if ($func === false) {
-            self::$transLink->rollBack();
-            $func = self::$transFail;
-            self::$transFail = null;
-        } else {
-            self::$transLink->commit();
-        }
+        self::$transLink->rollBack();
+        $func = self::$transFail;
+        self::$transFail = null;
         self::$transLink = null;
-        return $func->run();
+        return $func;
     }
 
     // ----------------------------------------------------------------------
@@ -239,7 +250,7 @@ abstract class DbBase extends Data
     // 条件
     final function where($where, $bind = null)
     {
-        empty($where) || ($this->bind($bind)->components->where = $where);
+        empty($where) || $this->components->where = is_null($w = $this->bind($bind)->components->where) ? $where : $w . ' AND ' . $where;
         return $this;
     }
 
@@ -267,7 +278,7 @@ abstract class DbBase extends Data
     // 字段：改
     final function set($set, $bind = null)
     {
-        empty($set) || ($this->bind($bind)->components->set = $set);
+        empty($set) || $this->components->set = is_null($s = $this->bind($bind)->components->set) ? $set : $s . ',' . $set;
         return $this;
     }
 
@@ -443,7 +454,7 @@ abstract class DbBase extends Data
     // 条件数组处理
     final protected function parseWhere()
     {
-        return ($where = $this->components->where) ? ' WHERE ' . self::unquote(is_array($where) ? implode(' ', $where) : $where) : '';
+        return ($where = $this->components->where) ? ' WHERE ' . self::unquote($where) : '';
     }
 
     // 二次筛选条件数组处理

@@ -110,7 +110,7 @@ final class Csn
     // 错误处理
     static function error($code, $msg, $file, $line)
     {
-        DbBase::getTrans() ? DbBase::transEnd(false)->run() : self::closure($code, $msg, $file, $line);
+        DbBase::getTrans() ? DbBase::transEnd()->run() : self::closure($code, $msg, $file, $line);
     }
 
     // 致命错误处理

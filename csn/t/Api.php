@@ -48,6 +48,18 @@ class Api extends Instance
     }
 
     // ----------------------------------------------------------------------
+    //  整理数据
+    // ----------------------------------------------------------------------
+
+    function pack()
+    {
+        $data = is_null($this->data) ? [] : $this->data;
+        $data['status'] = $this->code;
+        is_null($this->msg) || $data['msg'] = $this->msg;
+        return $data;
+    }
+
+    // ----------------------------------------------------------------------
     //  接口返回
     // ----------------------------------------------------------------------
 
@@ -55,9 +67,7 @@ class Api extends Instance
     {
         is_null($data) || $this->data($data, $name);
         header('Content-Type:application/json');
-        $data = is_null($this->data) ? [] : $this->data;
-        $data['status'] = $this->code;
-        is_null($this->msg) || $data['msg'] = $this->msg;
+        $data = $this->pack();
         exit(json_encode($data));
     }
 
