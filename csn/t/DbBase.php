@@ -254,13 +254,6 @@ abstract class DbBase extends Data
         return $this;
     }
 
-    // 条件(进一步筛选)
-    final function having($having, $bind = null)
-    {
-        empty($having) || ($this->bind($bind)->components->having = $having);
-        return $this;
-    }
-
     // 预编译
     final function bind($bind)
     {
@@ -455,12 +448,6 @@ abstract class DbBase extends Data
     final protected function parseWhere()
     {
         return ($where = $this->components->where) ? ' WHERE ' . self::unquote($where) : '';
-    }
-
-    // 二次筛选条件数组处理
-    final protected function parseHaving()
-    {
-        return ($having = $this->components->having) ? ' HAVING ' . (is_array($having) ? implode(' ', $having) : $having) : '';
     }
 
     // 获取指定部分SQL语句
