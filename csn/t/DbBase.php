@@ -159,8 +159,8 @@ abstract class DbBase extends Data
     // 开始事务
     final static function beginTrans($link, $action, $fail)
     {
-        $action instanceof Course || $action instanceof Api || Csn::end('事务函数须为 Course 或 Api 对象');
-        $fail instanceof Course || $fail instanceof Api || Csn::end('事务故障函数须为 Course 或 Api 对象');
+        $action instanceof Course || Csn::end('事务函数须为 Course 对象');
+        $fail instanceof Course || Csn::end('事务故障函数须为 Course 对象');
         $link->beginTransaction();
         self::$transLink = $link;
         self::$transFail = $fail;
@@ -172,13 +172,14 @@ abstract class DbBase extends Data
     }
 
     // 结束事务
-    final static function transEnd()
+    final static function transEnd($error = false)
     {
         if (is_null(self::$transLink)) return;
         self::$transLink->rollBack();
-        $func = self::$transFail;
+        $func = self::$transFail->run();
         self::$transFail = null;
         self::$transLink = null;
+        $error && Csn::dump(self::lastSql(), $error);
         return $func;
     }
 
