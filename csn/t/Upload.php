@@ -62,9 +62,11 @@ class Upload extends Instance
     //  类型限制
     // ----------------------------------------------------------------------
 
-    function type($course, $info = false)
+    function type($exts, $info = false)
     {
-        $course->unShift($this->file['type'])->run() ? $this : ($info ? Csn::end($info) : die);
+        is_array($exts) || $exts = [$exts];
+        in_array($this->ext(), $exts) || ($info ? Csn::end($info) : die);
+        return $this;
     }
 
     // ----------------------------------------------------------------------
@@ -87,15 +89,20 @@ class Upload extends Instance
 
     private $extCode = [7790 => 'exe', 7784 => 'midi', 8075 => 'zip', 8297 => 'rar', 255216 => 'jpg', 7173 => 'gif', 6677 => 'bmp', 13780 => 'png'];
 
+    private $ext;
+
     private function ext()
     {
-        // 读取文件前2字节
-        $fp = fopen($this->file['tmp_name'], "rb");
-        $bin = fread($fp, 2);
-        fclose($fp);
-        $info = @unpack("C2chars", $bin);
-        $code = intval($info['chars1'] . $info['chars2']);
-        return key_exists($code, $this->extCode) ? $this->extCode[$code] : false;
+        if (is_null($this->ext)) {
+            // 读取文件前2字节
+            $fp = fopen($this->file['tmp_name'], "rb");
+            $bin = fread($fp, 2);
+            fclose($fp);
+            $info = @unpack("C2chars", $bin);
+            $code = intval($info['chars1'] . $info['chars2']);
+            $this->ext = key_exists($code, $this->extCode) ? $this->extCode[$code] : false;
+        }
+        return $this->ext;
     }
 
 }
