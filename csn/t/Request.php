@@ -31,6 +31,7 @@ final class Request extends Instance
         $this->mobile = $this->mobile();
         $this->get = $_GET;
         $this->post = $_POST;
+        $this->files = $_FILES;
         return self::single();
     }
 
@@ -195,6 +196,31 @@ final class Request extends Instance
     function post($name = null, $default = null)
     {
         return is_null($name) ? $this->post : (key_exists($name, $this->post) ? $this->post[$name] : $default);
+    }
+
+    // ----------------------------------------------------------------------
+    //  参数值：FILES
+    // ----------------------------------------------------------------------
+
+    private $files;
+
+    function hasFile($name)
+    {
+        return key_exists($name, $this->files);
+    }
+
+    function files($name = null, $default = null)
+    {
+        return is_null($name) ? $this->files : ($this->hasFile($name) ? $this->files[$name] : $default);
+    }
+
+    // ----------------------------------------------------------------------
+    //  文件上传
+    // ----------------------------------------------------------------------
+
+    function upload($name)
+    {
+        return Upload::instance($name);
     }
 
     // ----------------------------------------------------------------------
