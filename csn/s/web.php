@@ -60,6 +60,6 @@ return [
     //  基础编码字符集
     // ----------------------------------------------------------------------
 
-    'base_code' => '123456789abcdefghijkmnopqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ'
+    'base_code' => '123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz'
 
 ];

@@ -67,7 +67,7 @@ class Controller
     final protected function redirect($url = '/', $info = false, $time = 1000)
     {
         $info && Csn::close($info, $url, $time);
-        usleep($time * 1000);
+//        usleep($time * 1000);
         header('Location:' . $url);
         die;
     }
