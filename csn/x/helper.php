@@ -53,9 +53,9 @@ function varType($var)
 //  模板引入方法
 // ----------------------------------------------------------------------
 
-function viewInclude($path, $data, $time)
+function view($names, $func = null, $cacheTime = null)
 {
-    echo \csn\View::instance($path)->makeHtml($data, $time);
+    return \csn\View::instance($names)->makeHtml($func, $cacheTime);
 }
 
 // ----------------------------------------------------------------------

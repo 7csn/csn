@@ -287,7 +287,7 @@ final class View extends Instance
             }
             $dataStr = '[' . join(',', $data) . ']';
         }
-        return '<?php viewInclude("' . $match[2] . '", ' . $dataStr . ', ' . (empty($match[8]) ? 'null' : (int)$match[8]) . ');?>';
+        return '<?php echo view("' . $match[2] . '", ' . $dataStr . ', ' . (empty($match[8]) ? 'null' : (int)$match[8]) . ');?>';
     }
 
 }
