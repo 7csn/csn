@@ -91,13 +91,29 @@ final class Redis extends Instance
     {
         $alias = substr($name, 0, 1) === '_';
         $name = $alias ? substr($name, 1) : $name;
-        if (in_array($name, [''])) {
+        if (in_array(strtoupper($name), ['DEL,DUMP,EXISTS,EXPIRE,EXPIREAT,PEXPIRE,PEXPIREAT,MOVE,PERSIST,RENAME,RENAMENX,SET,GETSET,SETBIT,SETEX,SETNX,SETRANGE,MSET,MSETNX,PSETEX,INCR,INCRBY,INCRBYFLOAT,
+        DECR,DECRBY,APPEND,HDEL,HINCRBY,HINCRBYFLOAT,HMSET,HSET,HSETNX,HSCAN,BLPOP,
+        BRPOP,BRPOPLPUSH,LINDEX,LINSERT,LPOP,LPUSH,LPUSHX,LREM,LSET,LTRIM,RPOP,RPOPLPUSH,RPUSH,RPUSHX,
+        SADD,SDIFFSTORE,SINTERSTORE,SMOVE,SPOP,SREM,SUNIONSTORE,SSCAN,ZADD,ZINCRBY,ZINTERSTORE,ZREM,
+        ZREMRANGEBYLEX,ZREMRANGEBYRANK,ZREMRANGEBYSCORE,ZUNIONSTORE,ZSCAN,PFADD,PFMERGE,PSUBSCRIBE,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,'])) {
             $node = 'master';
-        } elseif (in_array($name, [''])) {
+        } elseif (in_array(strtoupper($name), ['EXISTS,KEYS,PTTL,TTL,RANDOMKEY,TYPE,GET,GETRANGE,GETBIT,MGET,STRLEN,HEXISTS,HGET,HGETALL,HKEYS,HLEN,HMGET,HVALS,LLEN,
+        LRANGE,SCARD,SDIFF,SINTER,SISMEMBER,SMEMBERS,SRANDMEMBER,SUNION,ZCARD,ZCOUNT,ZLEXCOUNT,ZRANGE,ZRANGEBYLEX,ZRANGEBYSCORE,ZRANK,
+        ZREVRANGE,ZREVRANGEBYSCORE,ZREVRANK,ZSCORE,PFCOUNT,PUBSUB,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,'])) {
             $node = 'slave';
         } else return;
         $key = $alias ? array_shift($args) : $args[0];
-        return call_user_func_array([self::instance()->{$node}($key), $name], $args);
+        $redis = self::instance()->{$node}($key);
+        return call_user_func_array([$redis, $name], $args);
+    }
+
+    // ----------------------------------------------------------------------
+    //  关闭指定连接
+    // ----------------------------------------------------------------------
+
+    static function keys()
+    {
+
     }
 
     // ----------------------------------------------------------------------

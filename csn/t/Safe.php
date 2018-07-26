@@ -68,30 +68,40 @@ final class Safe
     //  生成验证码及图片
     // ----------------------------------------------------------------------
 
-    static function imgCode($len = 4, $width = 160, $height = 50, $size = 20)
+    static function imgCode($num = 5, $width = 250, $height = 62, $size = 25)
     {
         // 生成背景
         $im = imagecreatetruecolor($width, $height);
-        imagefilledrectangle($im, 0, $height, $width, 0, imagecolorallocate($im, mt_rand(157, 255), mt_rand(157, 255), mt_rand(157, 255)));
-        // 生成随机码
-        $charset = 'abcdefghkmnprstuvwxyzABCDEFGHKMNPRSTUVWXYZ0123456789';
-        $_len = strlen($charset) - 1;
+        imagefilledrectangle($im, 0, $height, $width, 0, imagecolorallocate($im, 243, 251, 254));
+        // 字符组
+        $charset = '123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz';
+        $len = strlen($charset) - 1;
+        // 干扰字符
+        for ($i = 0; $i < 10; $i++) {
+            $color = imagecolorallocate($im, mt_rand(150, 225), mt_rand(150, 225), mt_rand(150, 225));
+            for ($j = 0; $j < 5; $j++) imagestring($im, 5, mt_rand(-10, $width), mt_rand(-10, $height), $charset[mt_rand(0, $len)], $color);
+        }
+        // 主色调：曲线、字体
+        $color = imagecolorallocate($im, mt_rand(1, 150), mt_rand(1, 150), mt_rand(1, 150));
+        // 绘制曲线：振幅、角度偏移、Y轴偏移
+        $A = mt_rand($height / 4, $height / 2);
+        $S = mt_rand(-$height / 4, $height / 4);
+        $H = mt_rand(-$height / 4, $height / 4);
+        $w = (2 * M_PI) / mt_rand($width / 4, $width * 2);
+        for ($d = 0; $d <= $width; $d++) {
+            $y = $A * sin($w * $d + $S) + $H + $height / 2;
+            $i = $size / 5;
+            while (--$i > 0) {
+                imagesetpixel($im, $d + $i, $y + $i, $color);
+            }
+        }
+        // 验证码
         $str = '';
-        $len = min([$len, 6]);
-        for ($i = 0; $i < $len; $i++) {
-            $str .= $charset[mt_rand(0, $_len)];
-        }
-        //生成线条、雪花
-        for ($i = 0; $i < 6; $i++) {
-            imageline($im, mt_rand(0, $width), mt_rand(0, $height), mt_rand(0, $width), mt_rand(0, $height), imagecolorallocate($im, mt_rand(0, 156), mt_rand(0, 156), mt_rand(0, 156)));
-        }
-        for ($i = 0; $i < 50; $i++) {
-            imagestring($im, mt_rand(1, 5), mt_rand(0, $width), mt_rand(0, $height), '*', imagecolorallocate($im, mt_rand(200, 255), mt_rand(200, 255), mt_rand(200, 255)));
-        }
-        // 生成文字
-        $_x = $width / $len;
-        for ($i = 0; $i < $len; $i++) {
-            imagettftext($im, $size, mt_rand(-30, 30), $_x * $i + mt_rand(1, 5), $height / 1.4, imagecolorallocate($im, mt_rand(0, 156), mt_rand(0, 156), mt_rand(0, 156)), CSN_S . 'vcode.ttf', $str[$i]);
+        $dw = $width / ($num + 1) / 2;
+        for ($i = 1; $i <= $num; $i++) {
+            $code = $charset[mt_rand(0, $len)];
+            imagettftext($im, $size, mt_rand(-40, 40), mt_rand($dw * (2 * $i - 1), $dw * 2 * $i), $height / 1.4, $color, CSN . 'font.ttf', $code);
+            $str .= $code;
         }
         // 保存为对象
         $obj = new \StdClass();
