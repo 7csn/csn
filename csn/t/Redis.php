@@ -6,21 +6,17 @@ final class Redis extends Instance
 {
 
     // ----------------------------------------------------------------------
-    //  构造函数
+    //  初始化配置信息
     // ----------------------------------------------------------------------
 
-    // 主库是否分布式
-    private $distribute;
+    // 主节点对象
+    private $node;
 
-    // 密码数组
-    private $auth;
-
-    // 初始化配置信息
+    // 构造函数
     function construct()
     {
-        $this->distribute = Config::data('redis.distribute');
-        list($this->writes, $this->reads) = $this->distribute ? DT::init(Config::data('redis.nodes')) : MS::init(Config::data('redis.nodes'));
-        $this->auth = Config::data('redis.auth');
+        list($this->writes, $this->ms) = Node::init(Config::data('redis.nodes'));
+        $this->node = Config::data('redis.distribute') ? Distribute::instance($this->writes) : Random::instance($this->writes);
         return self::single();
     }
 
@@ -37,92 +33,90 @@ final class Redis extends Instance
         return $this->writes;
     }
 
-    // 根据
-    protected function master($key = null)
+    // 获取连接
+    function master($key = null)
     {
-        return $this->distribute ? DT::rand($key, $this->writes) : MS::rand($key, $this->writes);
+        return $this->connect($this->node->getNode($key));
     }
+
+    // ----------------------------------------------------------------------
+    //  主从数据库对照表
+    // ----------------------------------------------------------------------
+
+    private $ms;
 
     // ----------------------------------------------------------------------
     //  从数据库
     // ----------------------------------------------------------------------
 
-    // 列表
-    private $reads;
-
     // 获取列表
-    protected function reads()
+    protected function reads($key = null)
     {
-        is_null(self::$ms) && self::writes();
-        return self::$ms[self::master()];
+        return $this->ms[$this->master($key)];
     }
 
-    // 获取读数据库地址
-    protected function slave()
+    // 获取连接
+    function slave($key = null)
     {
-        return self::getTrans() ? self::master() : (is_null(self::$slave) ? self::$slave = MS::rand(self::reads()) : self::$slave);
+        return $this->connect(Random::rand($this->reads($key)));
     }
 
     // ----------------------------------------------------------------------
-    //
+    //  数据库连接
     // ----------------------------------------------------------------------
 
+    // 列表
+    private static $links = [];
 
-    // ----------------------------------------------------------------------
-    //
-    // ----------------------------------------------------------------------
-
-    // Redis对象
-    private static function obj($address = '127.0.0.1:6379')
+    // 获取
+    protected static function connect($address)
     {
-        if (!key_exists($address, self::$obj)) {
-            $obj = new \Redis();
-            call_user_func_array([$obj, 'connect'], explode(':', $address));
-            $auth = self::auth();
-            key_exists($address, $auth) && call_user_func([$obj, 'auth'], $auth[$address]);
-            self::$obj[$address] = $obj;
+        if (key_exists($address, self::$links)) {
+            $link = self::$links[$address];
         } else {
-            $obj = self::$obj[$address];
+            $link = new \Redis();
+            call_user_func_array([$link, 'connect'], explode(':', $address));
+            $auth = Config::data('redis.auth');
+            key_exists($address, $auth) && call_user_func([$link, 'auth'], $auth[$address]);
+            self::$links[$address] = $link;
         }
-        return $obj;
+        return $link;
     }
 
     // ----------------------------------------------------------------------
-    //
+    //  常规操作
     // ----------------------------------------------------------------------
 
-    // 密码数组
-    private static function auth()
-    {
-        if (is_null(self::$auth)) {
-            $conf = self::conf();
-            self::$auth = key_exists('auth', $conf) ? $conf['auth'] : [];
-        }
-        return self::$auth;
-    }
-
-    // ----------------------------------------------------------------------
-    //
-    // ----------------------------------------------------------------------
-
-    // Redis常用操作
     static function __callStatic($name, $args)
     {
-        $redis = self::obj();
-        if (method_exists($redis, $name)) {
-            return call_user_func_array([$redis, $name], $args);
-        }
+        $alias = substr($name, 0, 1) === '_';
+        $name = $alias ? substr($name, 1) : $name;
+        if (in_array($name, [''])) {
+            $node = 'master';
+        } elseif (in_array($name, [''])) {
+            $node = 'slave';
+        } else return;
+        $key = $alias ? array_shift($args) : $args[0];
+        return call_user_func_array([self::instance()->{$node}($key), $name], $args);
     }
 
     // ----------------------------------------------------------------------
-    //
+    //  关闭指定连接
     // ----------------------------------------------------------------------
 
-    // 关闭Redis链接
-    static function close()
+    static function close($address)
     {
-        foreach (self::$obj as $redis) {
-            $redis->close();
+        key_exists($address, self::$links) && self::$links[$address]->close();
+    }
+
+    // ----------------------------------------------------------------------
+    //  关闭所有连接
+    // ----------------------------------------------------------------------
+
+    static function closeAll()
+    {
+        foreach (self::links as $link) {
+            $link->close();
         }
     }
 

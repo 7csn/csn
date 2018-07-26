@@ -19,7 +19,7 @@ abstract class Model extends DbBase
     final protected static function writes()
     {
         if (is_null(self::$ws)) {
-            list(self::$ws, self::$ms) = MS::init(Config::data('mysql.model.nodes'));
+            list(self::$ws, self::$ms) = Node::init(Config::data('mysql.model.nodes'));
         }
         return self::$ws;
     }
@@ -37,7 +37,7 @@ abstract class Model extends DbBase
     // 获取写数据库地址
     final protected static function master()
     {
-        return is_null(self::$master) ? self::$master = MS::rand(self::writes()) : self::$master;
+        return is_null(self::$master) ? self::$master = Random::instance(self::writes())->getNode() : self::$master;
     }
 
     // 读数据库地址
@@ -46,7 +46,7 @@ abstract class Model extends DbBase
     // 获取读数据库地址
     final protected static function slave()
     {
-        return self::getTrans() ? self::master() : (is_null(self::$slave) ? self::$slave = MS::rand(self::reads()) : self::$slave);
+        return self::getTrans() ? self::master() : (is_null(self::$slave) ? self::$slave = Random::instance(self::reads())->getNode() : self::$slave);
     }
 
     // ----------------------------------------------------------------------

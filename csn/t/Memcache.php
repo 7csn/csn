@@ -2,152 +2,118 @@
 
 namespace csn;
 
-class Memcache
+class Memcache extends Instance
 {
 
-    static protected $nodes;        // 虚实节点数组
-    static protected $points = [];  // 虚拟节点数组
-    static protected $conf;         // 真实节点地址及对应虚拟节点数量
+    // ----------------------------------------------------------------------
+    //  初始化配置信息
+    // ----------------------------------------------------------------------
 
-    // 配置信息初始化
-    static function conf()
+    // 节点对象
+    private $obj;
+
+    // 节点对象
+    private $nodes = [];
+
+    // 构造函数
+    function construct()
     {
-        if (is_null(self::$conf)) {
-            foreach (Config::data('memcache') as $k => $v) {
-                is_int($k) ? self::$conf[$v] = 1 : self::$conf[$k] = $v;
-            }
+        foreach (Config::data('memcache') as $k => $v) {
+            is_int($k) ? $this->nodes[$v] = 1 : $this->nodes[$k] = $v;
         }
-        return self::$conf;
+        $this->obj = Distribute::instance($this->nodes);
+        return self::single();
     }
 
-    // 字符串转成非负整数
-    static function hash($str)
+    // ----------------------------------------------------------------------
+    //  数据库连接
+    // ----------------------------------------------------------------------
+
+    // 获取连接
+    function link($key)
     {
-        return sprintf('%u', crc32($str));
+        return $this->connect($this->obj->getNode($key));
     }
 
-    // 获取虚实落点信息
-    static function getNodes()
+    // 连接列表
+    private static $links = [];
+
+    // 生成连接并返回
+    protected static function connect($address)
     {
-        if (is_null(self::$nodes)) {
-            self::$nodes = [];
-            foreach (self::conf() as $node => $num) {
-                self::addNode($node, $num);
-            }
+        if (key_exists($address, self::$links)) {
+            $link = self::$links[$address];
+        } else {
+            $link = new \Memcache();
+            call_user_func_array([$link, 'connect'], explode(':', $address));
+            self::$links[$address] = $link;
         }
-        return self::$nodes;
+        return $link;
     }
 
-    // 添加真实节点
-    protected static function addNode($node, $num)
-    {
-        if (!key_exists($node, self::$nodes)) {
-            for ($i = 1; $i <= $num; $i++) {
-                $point = self::hash($node . $i);
-                self::$points[$point] = $node;
-                self::$nodes[$node][] = $point;
-            }
-            self::sort();
-        }
-    }
+    // ----------------------------------------------------------------------
+    //  常规操作
+    // ----------------------------------------------------------------------
 
-    // 虚拟节点排序
-    static function sort()
+    static function __callStatic($name, $args)
     {
-        ksort(self::$points, SORT_NUMERIC);
-    }
-
-    // 计算真实落点
-    protected static function getNode($key)
-    {
-        self::getNodes();
-        $hash = self::hash($key);
-        $target = current(self::$points);
-        foreach (self::$points as $point => $node) {
-            if ($hash <= $point) {
-                $target = $node;
-                break;
-            }
-        }
-        // 指针复位
-        reset(self::$points);
-        return $target;
-    }
-
-    // 连接memcache服务器
-    protected static function connect($node)
-    {
-        if (!key_exists($node, Csn::$usemem)) {
-            Csn::$usemem[$node] = new \Memcache;
-            list($ip, $port) = explode(':', $node);
-            Csn::$usemem[$node]->connect($ip, $port);
-        }
-        return Csn::$usemem[$node];
-    }
-
-    // memcache常规操作
-    static function __callStatic($fn, $args)
-    {
-        $b = substr($fn, 0, 1) === '_';
-        $fn = $b ? substr($fn, 1) : $fn;
-        if (in_array($fn, ['set', 'get', 'add', 'replace', 'delete', 'increment', 'decrement'])) {
-            $key = $b ? array_shift($args) : $args[0];
-            $mem = self::connect(self::getNode($key));
-            $rm = new \ReflectionMethod($mem, $fn);
-            return $rm->invokeArgs($mem, $args);
+        $alias = substr($name, 0, 1) === '_';
+        $name = $alias ? substr($name, 1) : $name;
+        if (in_array($name, ['set', 'get', 'add', 'replace', 'delete', 'increment', 'decrement'])) {
+            $key = $alias ? array_shift($args) : $args[0];
+            return call_user_func_array([self::instance()->link($key), $name], $args);
         }
     }
 
-    // 查看memcache统计信息
-    static function getStats($node)
+    // ----------------------------------------------------------------------
+    //  查看指定数据库统计信息
+    // ----------------------------------------------------------------------
+
+    static function getStats($address)
     {
-        return self::connect($node)->getStats();
+        return self::connect($address)->getStats();
     }
 
-    // 清空指定memcache服务器缓存
-    static function flush($node)
+    // ----------------------------------------------------------------------
+    //  清空指定数据库缓存
+    // ----------------------------------------------------------------------
+
+    static function flush($address)
     {
-        return self::connect($node)->flush();
+        return self::connect($address)->flush();
     }
 
-    // 清空所有memcache服务器缓存
+    // ----------------------------------------------------------------------
+    //  清空所有数据库缓存
+    // ----------------------------------------------------------------------
+
     static function flushAll()
     {
         $arr = [];
-        foreach (self::getNodes() as $node => $points) {
-            $arr[$node] = self::connect($node)->flush();
+        foreach (self::links as $address => $link) {
+            $arr[$address] = $link->flush();
         }
         return $arr;
     }
 
-    // 关闭指定连接
-    static function close($node)
+    // ----------------------------------------------------------------------
+    //  关闭指定连接
+    // ----------------------------------------------------------------------
+
+    static function close($address)
     {
-        $b = null;
-        if (key_exists($node, Csn::$usemem)) {
-            $b = self::connect($node)->close();
-            unset(Csn::$usemem[$node]);
-        }
-        return $b;
+        key_exists($address, self::$links) && self::$links[$address]->close();
     }
 
-    // 关闭所有连接
+    // ----------------------------------------------------------------------
+    //  关闭所有连接
+    // ----------------------------------------------------------------------
+
     static function closeAll()
     {
-        $arr = [];
-        foreach (self::getNodes() as $node => $connect) {
-            $arr[$node] = self::close($node);
+        foreach (self::links as $link) {
+            $link->close();
         }
-        Csn::$usemem = [];
-        return $arr;
-    }
-
-    // 查看虚拟节点覆盖率
-    static function cover()
-    {
-        self::getNodes();
-        $max = array_sum(array_values(self::conf()));
-        return ($max - count(self::$points)) / $max;
     }
 
 }
