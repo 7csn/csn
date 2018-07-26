@@ -127,48 +127,36 @@ final class View extends Instance
     // 继承模板
     protected function compileExtends(&$content)
     {
-        $content = preg_replace_callback('/@extends\s*\(([\'"])?(.+?)\1\)/', [$this, '_compileExtends'], $content);
-    }
-
-    // 编译继承模板
-    protected function _compileExtends($match)
-    {
-        $names = $match[2];
-        $path = $this->path($names);
-        $source = APP_VIEW . $path . '.tpl';
-        is_file($source) || Csn::end('找不到视图模板' . $path);
-        $parent = file_get_contents($source);
-        $this->compileSectionSave($parent);
-        return $parent;
+        $content = preg_replace_callback('/@extends\s*\(([\'"])?(.+?)\1\)/', function ($match) {
+            $names = $match[2];
+            $path = $this->path($names);
+            $source = APP_VIEW . $path . '.tpl';
+            is_file($source) || Csn::end('找不到视图模板' . $path);
+            $parent = file_get_contents($source);
+            $this->compileSectionSave($parent);
+            return $parent;
+        }, $content);
     }
 
     // 继承模板区块解析
     protected function compileSectionSave(&$content)
     {
-        $content = preg_replace_callback('/@section\s*\(([\'"])?(.+?)\1\)(.*?)@show/us', [$this, '_compileSectionSave'], $content);
-    }
-
-    // 继承模板区块保存
-    protected function _compileSectionSave($match)
-    {
-        $this->sectionSave[$match[2]] = $match[3];
-        return '@save{' . $match[2] . '}';
+        $content = preg_replace_callback('/@section\s*\(([\'"])?(.+?)\1\)(.*?)@show/us', function ($match) {
+            $this->sectionSave[$match[2]] = $match[3];
+            return '@save{' . $match[2] . '}';
+        }, $content);
     }
 
     // 继承模板区块重写
     protected function compileSectionChange(&$content)
     {
-        $content = preg_replace_callback('/@section\s*\(([\'"])?(.+?)\1\)(.*?)@endSection/us', [$this, '_compileSectionChange'], $content);
-    }
-
-    // 编译继承模板区块重写
-    protected function _compileSectionChange($match)
-    {
-        $child = $match[3];
-        $name = $match[2];
-        strpos($child, '@parent') !== false && key_exists($name, $this->sectionSave) && $child = str_replace('@parent', $this->sectionSave[$name], $child);
-        $this->sectionChange[$name] = $child;
-        return '';
+        $content = preg_replace_callback('/@section\s*\(([\'"])?(.+?)\1\)(.*?)@endSection/us', function ($match) {
+            $child = $match[3];
+            $name = $match[2];
+            strpos($child, '@parent') !== false && key_exists($name, $this->sectionSave) && $child = str_replace('@parent', $this->sectionSave[$name], $child);
+            $this->sectionChange[$name] = $child;
+            return '';
+        }, $content);
     }
 
     // 继承模板区块展示
@@ -213,17 +201,6 @@ final class View extends Instance
             }
             return '<?php echo ' . $str . '; ?>';
         }, $content);
-    }
-
-    // 编译数组元素模板
-    protected static function _compileArr($match)
-    {
-        $arr = explode('.', $match[1]);
-        $str = '$' . $arr[0];
-        for ($i = 1, $c = count($arr); $i < $c; $i++) {
-            $str .= "['{$arr[$i]}']";
-        }
-        return '<?php echo ' . $str . '; ?>';
     }
 
     // 不解析模板
@@ -272,22 +249,18 @@ final class View extends Instance
     // include模板
     protected static function compileInclude(&$content)
     {
-        $content = preg_replace_callback('/<include\s+file=(["\'])([\w\.]+)\1\s*(data=(["\'])([\w\|]+)\4)?\s*(time=(["\'])(\d+)\7)?\s*\/?>/', 'self::_compileInclude', $content);
-    }
-
-    // 编译include模板
-    protected static function _compileInclude($match)
-    {
-        if (empty($match[5])) {
-            $dataStr = '[]';
-        } else {
-            $data = [];
-            foreach (explode('|', $match[5]) as $name) {
-                $data[] = '"' . $name . '"=>$' . $name;
+        $content = preg_replace_callback('/<include\s+file=(["\'])([\w\.]+)\1\s*(data=(["\'])([\w\|]+)\4)?\s*(time=(["\'])(\d+)\7)?\s*\/?>/', function ($match) {
+            if (empty($match[5])) {
+                $dataStr = '[]';
+            } else {
+                $data = [];
+                foreach (explode('|', $match[5]) as $name) {
+                    $data[] = '"' . $name . '"=>$' . $name;
+                }
+                $dataStr = '[' . join(',', $data) . ']';
             }
-            $dataStr = '[' . join(',', $data) . ']';
-        }
-        return '<?php echo view("' . $match[2] . '", ' . $dataStr . ', ' . (empty($match[8]) ? 'null' : (int)$match[8]) . ');?>';
+            return '<?php echo view("' . $match[2] . '", ' . $dataStr . ', ' . (empty($match[8]) ? 'null' : (int)$match[8]) . ');?>';
+        }, $content);
     }
 
 }
