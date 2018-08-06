@@ -56,6 +56,7 @@ class Random extends Instance
             if ($num > $rand) return $node;
             $rand -= $num;
         }
+        return false;
     }
 
 
