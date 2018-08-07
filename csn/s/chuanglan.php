@@ -9,7 +9,7 @@ return [
     // 余额查询
     'balance_url' => 'http://smssh1.253.com/msg/balance/json',
     // 账号
-    'usr' => 'N3171355',
+    'usr' => '',
     // 密码
-    'pwd' => '9K8MyUcHnCb206',
+    'pwd' => '',
 ];
