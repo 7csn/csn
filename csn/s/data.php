@@ -68,7 +68,8 @@ return [
                     'dp' => 'root'
                 ]
             ],
-            'dbn' => 'csn'
+            'dbn' => 'csn',
+            'dth' => 'csn_'
         ]
     ]
 ];

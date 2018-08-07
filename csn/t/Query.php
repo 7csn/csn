@@ -2,27 +2,30 @@
 
 namespace csn;
 
-class Query extends Data
+final class Query extends Data
 {
+
+    // ----------------------------------------------------------------------
+    //  主表名
+    // ----------------------------------------------------------------------
+
+    private $table;
+
+    // ----------------------------------------------------------------------
+    //  默认表前缀
+    // ----------------------------------------------------------------------
+
+    private $prefix;
 
     // ----------------------------------------------------------------------
     //  构造函数
     // ----------------------------------------------------------------------
 
-    function construct()
-    {
-        return false;
-    }
-
-    // ----------------------------------------------------------------------
-    //  主表及默认表前缀
-    // ----------------------------------------------------------------------
-
-    function main($table, $prefix = '')
+    function construct($table, $prefix = '')
     {
         $this->table = $table;
         $this->prefix = $prefix;
-        return $this;
+        return false;
     }
 
     // ----------------------------------------------------------------------
@@ -36,52 +39,71 @@ class Query extends Data
     }
 
     // ----------------------------------------------------------------------
-    //  SQL因素
+    //  关联表：左、内联、右、关联处理
     // ----------------------------------------------------------------------
 
-    // ----------------------------------------------------------------------
-    //  SQL因素
-    // ----------------------------------------------------------------------
+    function leftJoin($table, $on, $dth = null)
+    {
+        return $this->join($table, $on, $dth, 'LEFT');
+    }
 
-    // ----------------------------------------------------------------------
-    //  SQL因素
-    // ----------------------------------------------------------------------
+    function innerJoin($table, $on, $dth = null)
+    {
+        return $this->join($table, $on, $dth, 'INNER');
+    }
 
-    // 关联表
-    function join($table, $on, $dth, $type = 'INNER')
+    function rightJoin($table, $on, $dth = null)
+    {
+        return $this->join($table, $on, $dth, 'RIGHT');
+    }
+
+    private function join($table, $on, $dth, $type = 'INNER')
     {
         $tables = explode(' ', $table);
-        $table = key_exists([1, $tables]) ?
-        $table = (is_null($dth) ? $this->dth : $dth) . $table;
-        $join = [$type, $table, $alias];
+        $table = (is_null($dth) ? $this->prefix : $dth) . $tables[0];
+        $join = [$type, $table, key_exists(1, $tables) ? $tables[1] : $table];
         is_null($this->join) ? $this->join = [$join] : $this->join[] = $join;
+        is_null($this->on) ? $this->on = [$on] : $this->on[] = $on;
         return $this;
     }
 
-    // 左关联
-    function leftJoin($table, $alias = null, $dth = null)
+    // ----------------------------------------------------------------------
+    //  条件：与、或、绑定
+    // ----------------------------------------------------------------------
+
+    function where()
     {
-        return $this->join($table, $dth, $alias, 'LEFT');
+        if (is_callable($func = func_get_arg(0))) {
+            $obj = Where::instance('AND');
+            $func($obj);
+            list($where, $bind) = $obj->make();
+        } else {
+            list($where, $bind) = call_user_func_array([Where::instance(), 'merge'], func_get_args())->make();
+        }
+        return $this->bindWhere($where, $bind);
     }
 
-    // 内联
-    function innerJoin($table, $alias = null, $dth = null)
+    function OrWhere()
     {
-        return $this->join($table, $dth, $alias, 'INNER');
+        if (is_callable($func = func_get_arg(0))) {
+            $obj = Where::instance('OR');
+            $func($obj);
+            list($where, $bind) = $obj->make();
+        } else {
+            list($where, $bind) = call_user_func_array([Where::instance('OR'), 'merge'], func_get_args())->make();
+        }
+        return $this->bindWhere($where, $bind);
     }
 
-    // 右关联
-    function rightJoin($table, $alias = null, $dth = null)
+    function bindWhere($where, $bind = null, $type = 'AND')
     {
-        return $this->join($table, $dth, $alias, 'RIGHT');
-    }
-
-    // 条件
-    function where($where, $bind = null)
-    {
-        empty($where) || $this->where = is_null($w = $this->bind($bind)->where) ? $where : $w . ' AND ' . $where;
+        empty($where) || $this->where = is_null($w = $this->bind($bind)->where) ? $where : $w . ' ' . $type . ' ' . $where;
         return $this;
     }
+
+    // ----------------------------------------------------------------------
+    //  SQL因素
+    // ----------------------------------------------------------------------
 
     // 预编译
     function bind($bind)
@@ -90,12 +112,20 @@ class Query extends Data
         return $this;
     }
 
+    // ----------------------------------------------------------------------
+    //  SQL因素
+    // ----------------------------------------------------------------------
+
     // 字段：查
     function field($field, $bind = null)
     {
         empty($field) || ($this->bind($bind)->field = is_array($field) ? $field : explode(',', $field));
         return $this;
     }
+
+    // ----------------------------------------------------------------------
+    //  SQL因素
+    // ----------------------------------------------------------------------
 
     // 字段：改
     function set($set, $bind = null)
@@ -104,12 +134,20 @@ class Query extends Data
         return $this;
     }
 
+    // ----------------------------------------------------------------------
+    //  SQL因素
+    // ----------------------------------------------------------------------
+
     // 字段：增
     function values($values)
     {
         empty($values) || $this->values = $values;
         return $this;
     }
+
+    // ----------------------------------------------------------------------
+    //  SQL因素
+    // ----------------------------------------------------------------------
 
     // 归类
     function group($group)
@@ -118,12 +156,20 @@ class Query extends Data
         return $this;
     }
 
+    // ----------------------------------------------------------------------
+    //  SQL因素
+    // ----------------------------------------------------------------------
+
     // 顺序
     function order($order)
     {
         $this->order = $order;
         return $this;
     }
+
+    // ----------------------------------------------------------------------
+    //  SQL因素
+    // ----------------------------------------------------------------------
 
     // 限制
     function limit($from, $num = null)
@@ -159,6 +205,10 @@ class Query extends Data
         return $rArr ? $this->tableArr : $this->tableStr;
     }
 
+    // ----------------------------------------------------------------------
+    //  SQL因素
+    // ----------------------------------------------------------------------
+
     // 获取所有表结构
     protected function tableDesc()
     {
@@ -172,6 +222,10 @@ class Query extends Data
         }
         return $this->tableDesc;
     }
+
+    // ----------------------------------------------------------------------
+    //  SQL因素
+    // ----------------------------------------------------------------------
 
     // 字段处理：改
     protected function parseSet()
@@ -200,6 +254,10 @@ class Query extends Data
         // 返回修改字符串
         return ' SET ' . join(',', $setArr);
     }
+
+    // ----------------------------------------------------------------------
+    //  SQL因素
+    // ----------------------------------------------------------------------
 
     // 字段处理：增
     protected function parseValues()
@@ -235,11 +293,19 @@ class Query extends Data
         return ' (' . join(',', $valueBefore) . ') VALUES ' . join(',', $valueAfter);
     }
 
+    // ----------------------------------------------------------------------
+    //  SQL因素
+    // ----------------------------------------------------------------------
+
     // 条件数组处理
     protected function parseWhere()
     {
         return ($where = $this->where) ? ' WHERE ' . self::unquote($where) : '';
     }
+
+    // ----------------------------------------------------------------------
+    //  SQL因素
+    // ----------------------------------------------------------------------
 
     // 获取指定部分SQL语句
     protected function parseSql($type)
@@ -271,12 +337,54 @@ class Query extends Data
         }
     }
 
+    // ----------------------------------------------------------------------
+    //  SQL因素
+    // ----------------------------------------------------------------------
+
     // SQL关键字辅助处理
     protected function unquote($str)
     {
         $str = preg_replace('/(?<!\:)([a-zA-Z_]+)\.([a-zA-Z_]+)/', '`\1`.`\2`', $str);
         $str = preg_replace('/(?<!\:)([a-zA-Z_]+)\.\*/', '`\1`.*', $str);
         return $str;
+    }
+
+    // ----------------------------------------------------------------------
+    //  获取SQL：增、删、改、查
+    // ----------------------------------------------------------------------
+
+    function insert($values = null)
+    {
+        $this->values($values);
+        $sql = 'INSERT INTO' . $this->parseTable() . $this->parseValues();
+        $bind = $this->bind;
+        $this->clear();
+        return [$sql, $bind];
+    }
+
+    function delete()
+    {
+        $sql = 'DELETE FROM' . $this->parseTable() . $this->parseSql('on') . $this->parseWhere() . $this->parseSql('group') . $this->parseSql('order') . $this->parseSql('limit');
+        $bind = $this->bind;
+        $this->clear();
+        return [$sql, $bind];
+    }
+
+    function update($field = null, $bind = null)
+    {
+        $this->set($field, $bind);
+        $sql = 'UPDATE' . $this->parseTable() . $this->parseSql('on') . $this->parseSet() . $this->parseWhere() . $this->parseSql('group') . $this->parseSql('order') . $this->parseSql('limit');
+        $bind = $this->bind;
+        $this->clear();
+        return [$sql, $bind];
+    }
+
+    function select()
+    {
+        $sql = 'SELECT' . $this->parseSql('field') . ' FROM' . $this->parseTable() . $this->parseSql('on') . $this->parseWhere() . $this->parseSql('group') . $this->parseSql('order') . $this->parseSql('limit');
+        $bind = $this->bind;
+        $this->clear();
+        return [$sql, $bind];
     }
 
 }
