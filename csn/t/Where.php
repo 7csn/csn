@@ -2,69 +2,111 @@
 
 namespace csn;
 
-class Where extends Instance
+final class Where extends Instance
 {
 
     // ----------------------------------------------------------------------
     //  构造函数
     // ----------------------------------------------------------------------
 
-    private $type;
-
-    function construct($type = 'AND')
+    function construct($type = 'AND', $id = null)
     {
+        $this->type = $type;
+        $this->id = is_null($id) ? Safe::en(mt_rand()) : $id;
         return false;
     }
 
     // ----------------------------------------------------------------------
-    //  构造函数
+    //  绑定标记
     // ----------------------------------------------------------------------
 
-    private $merge;
+    private $id;
+
+    // ----------------------------------------------------------------------
+    //  连接类型
+    // ----------------------------------------------------------------------
+
+    private $type;
+
+    // ----------------------------------------------------------------------
+    //  条件数组
+    // ----------------------------------------------------------------------
+
+    private $merge = [];
+
+    // ----------------------------------------------------------------------
+    //  绑定数据
+    // ----------------------------------------------------------------------
 
     private $bind = [];
 
+    // ----------------------------------------------------------------------
+    //  复合条件
+    // ----------------------------------------------------------------------
+
     function merge($field, $value = null, $op = '=')
     {
-        if (is_array($field)) {
+        is_array($field) ? call_user_func(function ($obj) use ($field) {
             foreach ($field as $k => $v) {
-
+                is_array($v) ? $obj->merges($k, $v[0], key_exists(1, $v) ? $v[1] : '=') : $obj->merges($k, $v);
             }
-        } else {
-
-        }
+        }, $this) : $this->merges($field, $value, $op);
         return $this;
-        $args = func_get_args();
-        $size = count($args);
-        $size > 0 || Csn::end('');
-        return false;
     }
 
     // ----------------------------------------------------------------------
-    //  构造函数
+    //  条件解析
     // ----------------------------------------------------------------------
 
-    function merges($field, $value = null, $op = '=')
+    private function merges($field, $value = null, $op = '=')
     {
-        switch ($op = strtoupper($op))
-        {
+        switch ($op = strtoupper($op)) {
             case 'IN':
-                $after = ' IN '.(is_array($value) ? join(',', $value) : "($value)");
+                is_array($value) || $value = explode(',', $value);
+                $after = " IN (";
+                for ($i = 0, $c = count($value); $i < $c; $i++) {
+                    $after .= $this->bind($field . '_I_' . $i, $value[$i]) . ",";
+                }
+                $after = rtrim($after, ",") . ")";
                 break;
             case 'BETWEEN':
-                $after = ' BETWEEN '.(is_array($value) ? "{$value}  "join(',', $value) : "($value)");
+                list($start, $end) = is_array($value) ?: explode(',', $value);
+                $after = " BETWEEN {$this->bind($field . '_BS', $start)} AND {$this->bind($field . '_BE', $end)}";
                 break;
+            default:
+                $after = " $op {$this->bind($field, $value)}";
         }
+        $this->merge[] = "({$this->unquote($field)}{$after})";
         return $this;
     }
 
     // ----------------------------------------------------------------------
-    //  构造函数
+    //  绑定操作
     // ----------------------------------------------------------------------
 
-    function construct()
+    private function bind($key, $value)
     {
-        return false;
+        $bind = ":{$key}_W_{$this->id}";
+        $this->bind[$bind] = $value;
+        return $bind;
+    }
+
+    // ----------------------------------------------------------------------
+    //  字段反引
+    // ----------------------------------------------------------------------
+
+    private function unquote($str)
+    {
+        return '`' . (strpos($str, '.') === false ? $str : str_replace('.', '`.`', $str)) . '`';
+    }
+
+    // ----------------------------------------------------------------------
+    //  整合条件
+    // ----------------------------------------------------------------------
+
+    function make()
+    {
+        return ['(' . join(' AND ', $this->merge) . ')', $this->bind];
     }
 
 }
