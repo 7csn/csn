@@ -6,17 +6,6 @@ final class Where extends Instance
 {
 
     // ----------------------------------------------------------------------
-    //  构造函数
-    // ----------------------------------------------------------------------
-
-    function construct($type = 'AND', $id = null)
-    {
-        $this->type = $type;
-        $this->id = is_null($id) ? Safe::en(mt_rand()) : $id;
-        return false;
-    }
-
-    // ----------------------------------------------------------------------
     //  绑定标记
     // ----------------------------------------------------------------------
 
@@ -39,6 +28,17 @@ final class Where extends Instance
     // ----------------------------------------------------------------------
 
     private $bind = [];
+
+    // ----------------------------------------------------------------------
+    //  构造函数
+    // ----------------------------------------------------------------------
+
+    function construct($type = 'AND', $id = null)
+    {
+        $this->type = $type;
+        $this->id = is_null($id) ? Safe::en(mt_rand()) : $id;
+        return false;
+    }
 
     // ----------------------------------------------------------------------
     //  复合条件
@@ -73,6 +73,9 @@ final class Where extends Instance
                 list($start, $end) = is_array($value) ?: explode(',', $value);
                 $after = " BETWEEN {$this->bind($field . '_BS', $start)} AND {$this->bind($field . '_BE', $end)}";
                 break;
+            case 'LIKE':
+                $after = " $op {$this->bind($field.'_L', $value)}";
+                break;
             default:
                 $after = " $op {$this->bind($field, $value)}";
         }
@@ -87,7 +90,7 @@ final class Where extends Instance
     private function bind($key, $value)
     {
         $bind = ":{$key}_W_{$this->id}";
-        $this->bind[$bind] = $value;
+        $this->bind[$bind] = trim($value);
         return $bind;
     }
 
