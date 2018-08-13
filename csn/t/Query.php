@@ -61,44 +61,41 @@ final class Query extends Data
     {
         $tables = explode(' ', $table);
         $table = (is_null($dth) ? $this->prefix : $dth) . $tables[0];
-        $join = [$type, $table, key_exists(1, $tables) ? $tables[1] : $table];
+        $join = [$type, $table, key_exists(1, $tables) ? $tables[1] : $table, $on];
         is_null($this->join) ? $this->join = [$join] : $this->join[] = $join;
-        is_null($this->on) ? $this->on = [$on] : $this->on[] = $on;
         return $this;
     }
 
     // ----------------------------------------------------------------------
-    //  条件：与、或、绑定
+    //  条件：与、或、绑定、模型
     // ----------------------------------------------------------------------
 
     function where()
     {
-        if (is_callable($func = func_get_arg(0))) {
-            $obj = Where::instance('AND');
-            $func($obj);
-            list($where, $bind) = $obj->make();
-        } else {
-            list($where, $bind) = call_user_func_array([Where::instance(), 'merge'], func_get_args())->make();
-        }
-        return $this->bindWhere($where, $bind);
+        return $this->whereModel(func_get_args());
     }
 
-    function OrWhere()
+    function whereOr()
     {
-        if (is_callable($func = func_get_arg(0))) {
-            $obj = Where::instance('OR');
-            $func($obj);
-            list($where, $bind) = $obj->make();
-        } else {
-            list($where, $bind) = call_user_func_array([Where::instance('OR'), 'merge'], func_get_args())->make();
-        }
-        return $this->bindWhere($where, $bind);
+        return $this->whereModel(func_get_args(), 'OR', 'whereOr');
     }
 
     function bindWhere($where, $bind = null, $type = 'AND')
     {
-        empty($where) || $this->where = is_null($w = $this->bind($bind)->where) ? $where : $w . ' ' . $type . ' ' . $where;
+        empty($where) || $this->where = is_null($w = $this->bind($bind)->where) ? $where : ($w . ' ' . $type . ' ' . $where);
         return $this;
+    }
+
+    private function whereModel($args, $type = 'AND', $where = 'where')
+    {
+        if (is_callable($func = $args[0])) {
+            $obj = Where::instance();
+            call_user_func($func, $obj);
+            list($where, $bind) = $obj->make();
+        } else {
+            list($where, $bind) = call_user_func_array([Where::instance(), $where], $args)->make();
+        }
+        return $this->bindWhere($where, $bind, $type);
     }
 
     // ----------------------------------------------------------------------

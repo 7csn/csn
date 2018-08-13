@@ -6,22 +6,22 @@ final class Where extends Instance
 {
 
     // ----------------------------------------------------------------------
+    //  公共标记
+    // ----------------------------------------------------------------------
+
+    private static $sign = 0;
+
+    // ----------------------------------------------------------------------
     //  绑定标记
     // ----------------------------------------------------------------------
 
     private $id;
 
     // ----------------------------------------------------------------------
-    //  连接类型
-    // ----------------------------------------------------------------------
-
-    private $type;
-
-    // ----------------------------------------------------------------------
     //  条件数组
     // ----------------------------------------------------------------------
 
-    private $merge = [];
+    private $where;
 
     // ----------------------------------------------------------------------
     //  绑定数据
@@ -33,32 +33,56 @@ final class Where extends Instance
     //  构造函数
     // ----------------------------------------------------------------------
 
-    function construct($type = 'AND', $id = null)
+    function construct()
     {
-        $this->type = $type;
-        $this->id = is_null($id) ? Safe::en(mt_rand()) : $id;
+        $this->id = ++self::$sign;
         return false;
     }
 
     // ----------------------------------------------------------------------
-    //  复合条件
+    //  AND条件
     // ----------------------------------------------------------------------
 
-    function merge($field, $value = null, $op = '=')
+    function where($field, $value = null, $op = '=')
+    {
+        if (is_array($field)) {
+            foreach ($field as $k => $v) {
+                is_array($v) ? $this->merges($k, $v[0], key_exists(1, $v) ? $v[1] : '=', 'AND') : $this->merges($k, $v, '=', 'AND');
+            }
+        } else {
+            $this->merges($field, $value, $op);
+        }
+        return $this;
+    }
+
+    // ----------------------------------------------------------------------
+    //  OR条件
+    // ----------------------------------------------------------------------
+
+    function whereOr($field, $value = null, $op = '=')
     {
         is_array($field) ? call_user_func(function ($obj) use ($field) {
             foreach ($field as $k => $v) {
-                is_array($v) ? $obj->merges($k, $v[0], key_exists(1, $v) ? $v[1] : '=') : $obj->merges($k, $v);
+                is_array($v) ? $obj->merges($k, $v[0], key_exists(1, $v) ? $v[1] : '=', 'OR') : $obj->merges($k, $v, '=', 'OR');
             }
         }, $this) : $this->merges($field, $value, $op);
         return $this;
     }
 
     // ----------------------------------------------------------------------
+    //  条件模型
+    // ----------------------------------------------------------------------
+
+    private function whereModel()
+    {
+
+    }
+
+    // ----------------------------------------------------------------------
     //  条件解析
     // ----------------------------------------------------------------------
 
-    private function merges($field, $value = null, $op = '=')
+    private function merges($field, $value = null, $op = '=', $type = 'AND')
     {
         switch ($op = strtoupper($op)) {
             case 'IN':
@@ -79,7 +103,7 @@ final class Where extends Instance
             default:
                 $after = " $op {$this->bind($field, $value)}";
         }
-        $this->merge[] = "({$this->unquote($field)}{$after})";
+        $this->where[] = "({$this->unquote($field)}{$after})";
         return $this;
     }
 
@@ -109,7 +133,8 @@ final class Where extends Instance
 
     function make()
     {
-        return ['(' . join(' AND ', $this->merge) . ')', $this->bind];
+        return [$this->where, $this->bind];
+        return ['(' . join(' AND ', $this->where) . ')', $this->bind];
     }
 
 }
