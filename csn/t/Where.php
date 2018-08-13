@@ -45,14 +45,7 @@ final class Where extends Instance
 
     function where($field, $value = null, $op = '=')
     {
-        if (is_array($field)) {
-            foreach ($field as $k => $v) {
-                is_array($v) ? $this->merges($k, $v[0], key_exists(1, $v) ? $v[1] : '=', 'AND') : $this->merges($k, $v, '=', 'AND');
-            }
-        } else {
-            $this->merges($field, $value, $op);
-        }
-        return $this;
+        return $this->whereModel(func_get_args());
     }
 
     // ----------------------------------------------------------------------
@@ -61,28 +54,31 @@ final class Where extends Instance
 
     function whereOr($field, $value = null, $op = '=')
     {
-        is_array($field) ? call_user_func(function ($obj) use ($field) {
-            foreach ($field as $k => $v) {
-                is_array($v) ? $obj->merges($k, $v[0], key_exists(1, $v) ? $v[1] : '=', 'OR') : $obj->merges($k, $v, '=', 'OR');
-            }
-        }, $this) : $this->merges($field, $value, $op);
-        return $this;
+        return $this->whereModel(func_get_args(), 'OR');
     }
 
     // ----------------------------------------------------------------------
     //  条件模型
     // ----------------------------------------------------------------------
 
-    private function whereModel()
+    private function whereModel($args, $type = 'AND')
     {
-
+        if (is_array($field = $args[0])) {
+            foreach ($field as $k => $v) {
+                is_array($v) ? $this->merges($type, $k, $v[0], key_exists(1, $v) ? $v[1] : '=') : $this->merges($type, $k, $v, '=');
+            }
+        } else {
+            array_unshift($args, $type);
+            call_user_func_array([$this, 'merges'], $args);
+        }
+        return $this;
     }
 
     // ----------------------------------------------------------------------
     //  条件解析
     // ----------------------------------------------------------------------
 
-    private function merges($field, $value = null, $op = '=', $type = 'AND')
+    private function merges($type, $field, $value = null, $op = '=')
     {
         switch ($op = strtoupper($op)) {
             case 'IN':
@@ -103,7 +99,7 @@ final class Where extends Instance
             default:
                 $after = " $op {$this->bind($field, $value)}";
         }
-        $this->where[] = "({$this->unquote($field)}{$after})";
+        is_null($this->where) ? $this->where = "({$this->unquote($field)}{$after})" : ($this->where .= " $type ({$this->unquote($field)}{$after})");
         return $this;
     }
 
@@ -133,8 +129,7 @@ final class Where extends Instance
 
     function make()
     {
-        return [$this->where, $this->bind];
-        return ['(' . join(' AND ', $this->where) . ')', $this->bind];
+        return ["({$this->where})", $this->bind];
     }
 
 }
