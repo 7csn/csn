@@ -134,7 +134,7 @@ final class Query extends Instance
         if (is_array($field)) {
 
         }
-        empty($set) || $this->query->set = is_null($s = $this->bind($bind)->query->set) ? $set : $s . ',' . $set;
+        empty($set) || $this->query->set = is_null($s = $this->query->set) ? $set : $s . ',' . $set;
         return $this;
     }
 
@@ -358,7 +358,7 @@ final class Query extends Instance
 
     function insert($values = null)
     {
-        is_null($values) || $this->values($values);
+        $this->values($values);
         return $this->queryModel(function ($obj) {
             return 'INSERT INTO' . $obj->parseTable() . $obj->parseValues();
         });
@@ -381,7 +381,7 @@ final class Query extends Instance
 
     function select($field = null)
     {
-        is_null($field) || $this->field($field);
+        $this->field($field);
         return $this->queryModel(function ($obj) {
             return 'SELECT' . $obj->parseSql('field') . ' FROM' . $obj->parseTable() . $obj->parseSql('on') . $obj->parseWhere() . $obj->parseSql('group') . $obj->parseSql('order') . $obj->parseSql('limit');
         });
