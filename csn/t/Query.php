@@ -32,7 +32,6 @@ final class Query extends Instance
         $this->table = $table;
         $this->prefix = $prefix;
         $this->query = Data::instance();
-        return false;
     }
 
     // ----------------------------------------------------------------------
@@ -87,7 +86,7 @@ final class Query extends Instance
         return $this->whereModel(func_get_args(), 'OR', 'whereOr');
     }
 
-    function bindWhere($where, $bind = null, $type = 'AND')
+    function whereBind($where, $bind = null, $type = 'AND')
     {
         empty($where) || $this->query->where = is_null($w = $this->bind($bind)->query->where) ? $where : ($w . ' ' . $type . ' ' . $where);
         return $this;
@@ -102,7 +101,7 @@ final class Query extends Instance
         } else {
             list($where, $bind) = call_user_func_array([Where::instance(), $where], $args)->make();
         }
-        return $this->bindWhere($where, $bind, $type);
+        return $this->whereBind($where, $bind, $type);
     }
 
     // ----------------------------------------------------------------------
@@ -130,7 +129,7 @@ final class Query extends Instance
         return $this;
     }
 
-    function set($field, $val)
+    function set($field, $value)
     {
         if (is_array($field)) {
 
@@ -145,7 +144,7 @@ final class Query extends Instance
         return $this;
     }
 
-    function bindSet($set, $bind = null)
+    function setBind($set, $bind = null)
     {
         empty($set) || $this->set = is_null($s = $this->bind($bind)->set) ? $set : $s . ',' . $set;
         return $this;
@@ -359,35 +358,40 @@ final class Query extends Instance
 
     function insert($values = null)
     {
-        $this->values($values);
-        $sql = 'INSERT INTO' . $this->parseTable() . $this->parseValues();
-        $bind = $this->bind;
-        $this->clear();
-        return [$sql, $bind];
+        is_null($values) || $this->values($values);
+        return $this->queryModel(function ($obj) {
+            return 'INSERT INTO' . $obj->parseTable() . $obj->parseValues();
+        });
     }
 
     function delete()
     {
-        $sql = 'DELETE FROM' . $this->parseTable() . $this->parseSql('on') . $this->parseWhere() . $this->parseSql('group') . $this->parseSql('order') . $this->parseSql('limit');
-        $bind = $this->bind;
-        $this->clear();
-        return [$sql, $bind];
+        return $this->queryModel(function ($obj) {
+            return 'DELETE FROM' . $obj->parseTable() . $obj->parseSql('on') . $obj->parseWhere() . $obj->parseSql('group') . $obj->parseSql('order') . $obj->parseSql('limit');
+        });
     }
 
-    function update($field = null, $bind = null)
+    function update($set = null, $bind = null)
     {
-        $this->set($field, $bind);
-        $sql = 'UPDATE' . $this->parseTable() . $this->parseSql('on') . $this->parseSet() . $this->parseWhere() . $this->parseSql('group') . $this->parseSql('order') . $this->parseSql('limit');
-        $bind = $this->bind;
-        $this->clear();
-        return [$sql, $bind];
+        $this->set($set, $bind);
+        return $this->queryModel(function ($obj) {
+            return 'UPDATE' . $obj->parseTable() . $obj->parseSql('on') . $obj->parseSet() . $obj->parseWhere() . $obj->parseSql('group') . $obj->parseSql('order') . $obj->parseSql('limit');
+        });
     }
 
-    function select()
+    function select($field = null)
     {
-        $sql = 'SELECT' . $this->parseSql('field') . ' FROM' . $this->parseTable() . $this->parseSql('on') . $this->parseWhere() . $this->parseSql('group') . $this->parseSql('order') . $this->parseSql('limit');
-        $bind = $this->bind;
-        $this->clear();
+        is_null($field) || $this->field($field);
+        return $this->queryModel(function ($obj) {
+            return 'SELECT' . $obj->parseSql('field') . ' FROM' . $obj->parseTable() . $obj->parseSql('on') . $obj->parseWhere() . $obj->parseSql('group') . $obj->parseSql('order') . $obj->parseSql('limit');
+        });
+    }
+
+    function queryModel($func)
+    {
+        $sql = call_user_func($func, $this);
+        $bind = $this->query->bind;
+        $this->query->clear();
         return [$sql, $bind];
     }
 
