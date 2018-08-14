@@ -89,26 +89,27 @@ final class Where extends Instance
 
     private function parse($type, $field, $value = null, $op = '=')
     {
+        $key = Query::bindKey($field);
         switch ($op = strtoupper($op)) {
             case 'IN':
                 is_array($value) || $value = explode(',', $value);
-                $after = " IN (";
-                for ($i = 0, $c = count($value); $i < $c; $i++) {
-                    $after .= $this->bind($field . '_I_' . $i, $value[$i]) . ",";
+                $ins = [];
+                foreach ($value as $k => $v) {
+                    $ins[] = $this->bind($key . '_I' . $k, $v);
                 }
-                $after = rtrim($after, ",") . ")";
+                $parse = '(' . join(',', $ins) . ')';
                 break;
             case 'BETWEEN':
                 list($start, $end) = is_array($value) ?: explode(',', $value);
-                $after = " BETWEEN {$this->bind($field . '_BS', $start)} AND {$this->bind($field . '_BE', $end)}";
+                $parse = "{$this->bind($key . '_bs_', $start)} AND {$this->bind($key . '_be_', $end)}";
                 break;
             case 'LIKE':
-                $after = " $op {$this->bind($field.'_L', $value)}";
+                $parse = $this->bind($key . '_l_', $value);
                 break;
             default:
-                $after = " $op {$this->bind($field, $value)}";
+                $parse = $this->bind($key, $value);
         }
-        return $this->whereMake('(' . $this->unquote($field) . $after . ')', $type);
+        return $this->whereMake('(' . Query::unquote($field) . ' ' . $op . ' ' . $parse . ')', $type);
     }
 
     // ----------------------------------------------------------------------
@@ -127,18 +128,9 @@ final class Where extends Instance
 
     private function bind($key, $value)
     {
-        $bind = ":{$key}_W_{$this->id}";
+        $bind = "{$key}_W{$this->id}";
         $this->bind[$bind] = trim($value);
         return $bind;
-    }
-
-    // ----------------------------------------------------------------------
-    //  字段反引
-    // ----------------------------------------------------------------------
-
-    private function unquote($field)
-    {
-        return '`' . (strpos($field, '.') === false ? $field : str_replace('.', '`.`', $field)) . '`';
     }
 
     // ----------------------------------------------------------------------
