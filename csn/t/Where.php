@@ -63,13 +63,24 @@ final class Where extends Instance
 
     private function whereModel($args, $type = 'AND')
     {
-        if (is_array($field = $args[0])) {
-            foreach ($field as $k => $v) {
-                is_array($v) ? $this->merges($type, $k, $v[0], key_exists(1, $v) ? $v[1] : '=') : $this->merges($type, $k, $v, '=');
+        $field = $args[0];
+        if (is_callable($field)) {
+            $obj = self::instance();
+            call_user_func($field, $obj);
+            list($where, $bind) = $obj->make();
+            $this->whereMake($where, $type);
+            foreach ($bind as $k => $v) {
+                $this->bind[$k] = trim($v);
             }
         } else {
-            array_unshift($args, $type);
-            call_user_func_array([$this, 'merges'], $args);
+            if (is_array($field)) {
+                foreach ($field as $k => $v) {
+                    is_array($v) ? $this->merges($type, $k, $v[0], key_exists(1, $v) ? $v[1] : '=') : $this->merges($type, $k, $v, '=');
+                }
+            } else {
+                array_unshift($args, $type);
+                call_user_func_array([$this, 'merges'], $args);
+            }
         }
         return $this;
     }
@@ -99,12 +110,21 @@ final class Where extends Instance
             default:
                 $after = " $op {$this->bind($field, $value)}";
         }
-        is_null($this->where) ? $this->where = "({$this->unquote($field)}{$after})" : ($this->where .= " $type ({$this->unquote($field)}{$after})");
+        return $this->whereMake('(' . $this->unquote($field) . $after . ')', $type);
+    }
+
+    // ----------------------------------------------------------------------
+    //  记录条件
+    // ----------------------------------------------------------------------
+
+    private function whereMake($where, $type = 'AND')
+    {
+        is_null($this->where) ? $this->where = $where : ($this->where .= ' ' . $type . ' ' . $where);
         return $this;
     }
 
     // ----------------------------------------------------------------------
-    //  绑定操作
+    //  参数绑定
     // ----------------------------------------------------------------------
 
     private function bind($key, $value)
@@ -118,9 +138,9 @@ final class Where extends Instance
     //  字段反引
     // ----------------------------------------------------------------------
 
-    private function unquote($str)
+    private function unquote($field)
     {
-        return '`' . (strpos($str, '.') === false ? $str : str_replace('.', '`.`', $str)) . '`';
+        return '`' . (strpos($field, '.') === false ? $field : str_replace('.', '`.`', $field)) . '`';
     }
 
     // ----------------------------------------------------------------------
