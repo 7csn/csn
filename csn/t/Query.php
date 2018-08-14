@@ -2,7 +2,7 @@
 
 namespace csn;
 
-final class Query extends Data
+final class Query extends Instance
 {
 
     // ----------------------------------------------------------------------
@@ -18,6 +18,12 @@ final class Query extends Data
     private $prefix;
 
     // ----------------------------------------------------------------------
+    //  数据对象
+    // ----------------------------------------------------------------------
+
+    private $query;
+
+    // ----------------------------------------------------------------------
     //  构造函数
     // ----------------------------------------------------------------------
 
@@ -25,6 +31,7 @@ final class Query extends Data
     {
         $this->table = $table;
         $this->prefix = $prefix;
+        $this->query = Data::instance();
         return false;
     }
 
@@ -34,7 +41,7 @@ final class Query extends Data
 
     function alias($alias)
     {
-        $this->alias = $alias;
+        $this->query->alias = $alias;
         return $this;
     }
 
@@ -62,7 +69,7 @@ final class Query extends Data
         $tables = explode(' ', $table);
         $table = (is_null($dth) ? $this->prefix : $dth) . $tables[0];
         $join = [$type, $table, key_exists(1, $tables) ? $tables[1] : $table, $on];
-        is_null($this->join) ? $this->join = [$join] : $this->join[] = $join;
+        is_null($this->query->join) ? $this->query->join = [$join] : $this->query->join[] = $join;
         return $this;
     }
 
@@ -82,7 +89,7 @@ final class Query extends Data
 
     function bindWhere($where, $bind = null, $type = 'AND')
     {
-        empty($where) || $this->where = is_null($w = $this->bind($bind)->where) ? $where : ($w . ' ' . $type . ' ' . $where);
+        empty($where) || $this->query->where = is_null($w = $this->bind($bind)->query->where) ? $where : ($w . ' ' . $type . ' ' . $where);
         return $this;
     }
 
@@ -99,83 +106,82 @@ final class Query extends Data
     }
 
     // ----------------------------------------------------------------------
-    //  SQL因素
+    //  参数绑定
     // ----------------------------------------------------------------------
 
-    // 预编译
     function bind($bind)
     {
-        empty($bind) || $this->bind = is_null($b = $this->bind) ? $bind : array_merge($b, $bind);
+        empty($bind) || $this->query->bind = is_null($this->query->bind) ? $bind : array_merge($this->query->bind, $bind);
         return $this;
     }
 
     // ----------------------------------------------------------------------
-    //  SQL因素
+    //  字段：增、查、改、绑定
     // ----------------------------------------------------------------------
 
-    // 字段：查
-    function field($field, $bind = null)
+    function field($field)
     {
-        empty($field) || ($this->bind($bind)->field = is_array($field) ? $field : explode(',', $field));
+        $fields = is_array($field) ? $field : explode(',', $field);
+        $fieldArr = [];
+        foreach ($fields as $field) {
+            $fieldArr[] = $this->unquote(trim($field));
+        }
+        $this->query->field = join(',', $fieldArr);
         return $this;
     }
 
-    // ----------------------------------------------------------------------
-    //  SQL因素
-    // ----------------------------------------------------------------------
+    function set($field, $val)
+    {
+        if (is_array($field)) {
 
-    // 字段：改
-    function set($set, $bind = null)
+        }
+        empty($set) || $this->query->set = is_null($s = $this->bind($bind)->query->set) ? $set : $s . ',' . $set;
+        return $this;
+    }
+
+    function values($values)
+    {
+        empty($values) || $this->query->values = $values;
+        return $this;
+    }
+
+    function bindSet($set, $bind = null)
     {
         empty($set) || $this->set = is_null($s = $this->bind($bind)->set) ? $set : $s . ',' . $set;
         return $this;
     }
 
     // ----------------------------------------------------------------------
-    //  SQL因素
+    //  分组
     // ----------------------------------------------------------------------
 
-    // 字段：增
-    function values($values)
-    {
-        empty($values) || $this->values = $values;
-        return $this;
-    }
-
-    // ----------------------------------------------------------------------
-    //  SQL因素
-    // ----------------------------------------------------------------------
-
-    // 归类
     function group($group)
     {
-        $this->group = $group;
+        $this->query->group = $group;
         return $this;
     }
 
     // ----------------------------------------------------------------------
-    //  SQL因素
+    //  顺序
     // ----------------------------------------------------------------------
 
-    // 顺序
     function order($order)
     {
-        $this->order = $order;
+        $this->query->order = $order;
         return $this;
     }
 
     // ----------------------------------------------------------------------
-    //  SQL因素
+    //  限制
     // ----------------------------------------------------------------------
 
-    // 限制
     function limit($from, $num = null)
     {
         if (is_null($num)) {
             $num = $from;
             $from = 0;
         }
-        $this->limit = [$from, $num];
+        $this->query->limit = [$from, $num];
         return $this;
     }
 
@@ -301,10 +307,9 @@ final class Query extends Data
     }
 
     // ----------------------------------------------------------------------
-    //  SQL因素
+    //   获取指定部分SQL
     // ----------------------------------------------------------------------
 
-    // 获取指定部分SQL语句
     protected function parseSql($type)
     {
         $val = $this->$type;
@@ -335,15 +340,17 @@ final class Query extends Data
     }
 
     // ----------------------------------------------------------------------
-    //  SQL因素
+    //  表名、字段名反引
     // ----------------------------------------------------------------------
 
-    // SQL关键字辅助处理
-    protected function unquote($str)
+    protected function unquote($name)
     {
-        $str = preg_replace('/(?<!\:)([a-zA-Z_]+)\.([a-zA-Z_]+)/', '`\1`.`\2`', $str);
-        $str = preg_replace('/(?<!\:)([a-zA-Z_]+)\.\*/', '`\1`.*', $str);
-        return $str;
+        $index = strpos($name, '.');
+        if ($index === false) return "`$name`";
+        $field = substr($name, $index + 1);
+        return '`' . substr($name, 0, $index) . '`.' . ($field === '*' ? $field : ('`' . $field . '`'));
+//        $str = preg_replace('/(?<!\:)([a-zA-Z_]+)\.([a-zA-Z_]+)/', '`\1`.`\2`', $str);
+//        $str = preg_replace('/(?<!\:)([a-zA-Z_]+)\.\*/', '`\1`.*', $str);
     }
 
     // ----------------------------------------------------------------------
@@ -383,5 +390,9 @@ final class Query extends Data
         $this->clear();
         return [$sql, $bind];
     }
+
+    // ----------------------------------------------------------------------
+    //  修改字段：加、减、乘、除
+    // ----------------------------------------------------------------------
 
 }

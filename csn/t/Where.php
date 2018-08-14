@@ -69,17 +69,15 @@ final class Where extends Instance
             call_user_func($field, $obj);
             list($where, $bind) = $obj->make();
             $this->whereMake($where, $type);
-            foreach ($bind as $k => $v) {
-                $this->bind[$k] = trim($v);
-            }
+            $this->bind = array_merge($this->bind, $bind);
         } else {
             if (is_array($field)) {
                 foreach ($field as $k => $v) {
-                    is_array($v) ? $this->merges($type, $k, $v[0], key_exists(1, $v) ? $v[1] : '=') : $this->merges($type, $k, $v, '=');
+                    is_array($v) ? $this->parse($type, $k, $v[0], key_exists(1, $v) ? $v[1] : '=') : $this->parse($type, $k, $v, '=');
                 }
             } else {
                 array_unshift($args, $type);
-                call_user_func_array([$this, 'merges'], $args);
+                call_user_func_array([$this, 'parse'], $args);
             }
         }
         return $this;
@@ -89,7 +87,7 @@ final class Where extends Instance
     //  条件解析
     // ----------------------------------------------------------------------
 
-    private function merges($type, $field, $value = null, $op = '=')
+    private function parse($type, $field, $value = null, $op = '=')
     {
         switch ($op = strtoupper($op)) {
             case 'IN':
