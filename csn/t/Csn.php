@@ -45,9 +45,9 @@ final class Csn
 
     static function cmd()
     {
-        die('The function is temporarily not on-line.');
+//        die('The function is temporarily not on-line.');
         print_r($_SERVER['argc']);
-        echo "\n";
+        echo ENTER;
         print_r($_SERVER['argv']);
     }
 

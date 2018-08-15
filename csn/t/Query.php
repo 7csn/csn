@@ -2,7 +2,7 @@
 
 namespace csn;
 
-final class Query extends Instance
+class Query extends Instance
 {
 
     // ----------------------------------------------------------------------
@@ -21,7 +21,7 @@ final class Query extends Instance
     //  数据对象
     // ----------------------------------------------------------------------
 
-    private $query;
+    private $data;
 
     // ----------------------------------------------------------------------
     //  公共标记
@@ -44,7 +44,7 @@ final class Query extends Instance
         $this->id = ++self::$sign;
         $this->table = $table;
         $this->prefix = $prefix;
-        $this->query = Data::instance();
+        $this->data = Data::instance();
     }
 
     // ----------------------------------------------------------------------
@@ -53,7 +53,7 @@ final class Query extends Instance
 
     function alias($alias)
     {
-        $this->query->alias = $alias;
+        $this->data->alias = $alias;
         return $this;
     }
 
@@ -76,12 +76,13 @@ final class Query extends Instance
         return $this->join($table, $on, $dth, 'RIGHT');
     }
 
-    private function join($table, $on, $dth, $type = 'INNER')
+    function join($table, $on, $dth = null, $type = 'INNER')
     {
         $tables = explode(' ', $table);
         $table = (is_null($dth) ? $this->prefix : $dth) . $tables[0];
-        $join = [$type, $table, key_exists(1, $tables) ? $tables[1] : $table, $on];
-        is_null($this->query->join) ? $this->query->join = [$join] : $this->query->join[] = $join;
+        $alias = key_exists(1, $tables) ? $tables[1] : $table;
+        $join = [$type, $table, $alias, $on];
+        is_null($this->data->join) ? $this->data->join = [$join] : $this->data->join[] = $join;
         return $this;
     }
 
@@ -101,19 +102,15 @@ final class Query extends Instance
 
     function whereBind($where, $bind = null, $type = 'AND')
     {
-        empty($where) || $this->query->where = is_null($w = $this->bind($bind)->query->where) ? $where : ($w . ' ' . $type . ' ' . $where);
+        empty($where) || $this->data->where = is_null($w = $this->bind($bind)->data->where) ? $where : "$w $type $where";
         return $this;
     }
 
-    private function whereModel($args, $type = 'AND', $where = 'where')
+    private function whereModel($args, $type = 'AND', $fn = 'where')
     {
-        if (is_callable($func = $args[0])) {
-            $obj = Where::instance();
-            call_user_func($func, $obj);
-            list($where, $bind) = $obj->make();
-        } else {
-            list($where, $bind) = call_user_func_array([Where::instance(), $where], $args)->make();
-        }
+        $obj = Where::instance();
+        is_callable($func = $args[0]) ? call_user_func($func, $obj) : call_user_func_array([$obj, $fn], $args);
+        list($where, $bind) = $obj->make();
         return $this->whereBind($where, $bind, $type);
     }
 
@@ -123,158 +120,165 @@ final class Query extends Instance
 
     function bind($bind)
     {
-        empty($bind) || $this->query->bind = is_null($this->query->bind) ? $bind : array_merge($this->query->bind, $bind);
+        empty($bind) || $this->data->bind = is_null($this->data->bind) ? $bind : array_merge($this->data->bind, $bind);
         return $this;
     }
 
     // ----------------------------------------------------------------------
-    //  字段：增、查、改、绑定
+    //  字段：查
     // ----------------------------------------------------------------------
 
     function field($field)
     {
-        $fields = is_array($field) ? $field : explode(',', $field);
-        $fieldArr = [];
-        foreach ($fields as $field) {
-            $fieldArr[] = self::unquote(trim($field));
+        if (!empty($field)) {
+            $fields = is_array($field) ? $field : explode(',', $field);
+            $fieldArr = [];
+            foreach ($fields as $f) {
+                $fieldArr[] = self::unquote(trim($f));
+            }
+            $this->data->field = (is_null($this->data->field) ? '' : ($this->data->field . ',')) . join(',', $fieldArr);
         }
-        $this->query->field = join(',', $fieldArr);
         return $this;
     }
 
-    function set($field, $value)
-    {
-        if (is_array($field)) {
-            foreach ($field as $k => $v) {
-                $this->set($k, $v);
-            }
-        } else {
-            is_null($this->query->sets) ? $this->query->sets = [$field, $value] : $this->query->sets[$field] = $value;
-        }
-        return $this;
-    }
+    // ----------------------------------------------------------------------
+    //  字段：增
+    // ----------------------------------------------------------------------
 
     function values($values)
     {
-        empty($values) || $this->query->values = $values;
+        empty($values) || $this->data->values = $values;
         return $this;
+    }
+
+    // ----------------------------------------------------------------------
+    //  字段(改)：常规、自增、自减、自修改、绑定、模型
+    // ----------------------------------------------------------------------
+
+    function set($field, $value = null)
+    {
+        return $this->setModel($field, $value, function ($field) {
+            return "$field = ";
+        });
+    }
+
+    function setInc($field, $value = null)
+    {
+        return $this->setMore($field, '+', $value);
+    }
+
+    function setDec($field, $value = null)
+    {
+        return $this->setMore($field, '-', $value);
+    }
+
+    function setMore($field, $op, $value = null)
+    {
+        return $this->setModel($field, $value, function ($field) use ($op) {
+            return "$field = $field $op ";
+        });
     }
 
     function setBind($set, $bind = null)
     {
-        empty($set) || $this->query->set = is_null($s = $this->bind($bind)->query->set) ? $set : $s . ',' . $set;
+        empty($set) || $this->data->set = is_null($s = $this->bind($bind)->data->set) ? $set : "$s,$set";
         return $this;
     }
 
-    // ----------------------------------------------------------------------
-    //  字段：基于自身计算
-    // ----------------------------------------------------------------------
-
-    function setInc($field, $value)
-    {
-        return $this->setField($field, $value, '+', 'SI');
-    }
-
-    function setDec($field, $value)
-    {
-        return $this->setField($field, $value, '-', 'SD');
-    }
-
-    private function setField($field, $value, $op, $sign)
+    private function setModel($field, $value, $func)
     {
         if (is_array($field)) {
             foreach ($field as $k => $v) {
-                $this->setField($k, $v, $op, $sign);
+                $this->setModel($k, $v, $func);
             }
         } else {
+            $key = self::bindKey($field) . '_S_Q' . $this->id;
             $field = self::unquote($field);
-            $key = ':' . self::bindKey($field) . '_' . $sign . '_Q' . $this->id;
-            $set = "$field = $field $op :$key";
-            $this->setBind($set, [$key => $value]);
+            $set = call_user_func($func, $field) . ' ' . $key;
+            $this->setBind($set, [$field => $value]);
         }
         return $this;
     }
 
     // ----------------------------------------------------------------------
-    //  分组
+    //  分组：$group1,...
     // ----------------------------------------------------------------------
 
     function group($group)
     {
-        $this->query->group = $group;
+        $group = '`' . join('`,`', func_get_args()) . '`';
+        $this->data->group = is_null($g = $this->data->group) ? $group : "$g,$group";
         return $this;
     }
 
     // ----------------------------------------------------------------------
-    //  顺序
+    //  顺序：$field,$order | [$field1 => $order1,...]
     // ----------------------------------------------------------------------
 
-    function order($order)
+    function order($field, $orders = null)
     {
-        $this->query->order = $order;
+        if (is_array($field)) {
+            foreach ($field as $k => $v) {
+                $this->order($k, $v);
+            }
+        } else {
+            $orders = "`$field` $orders";
+            $this->data->order = is_null($o = $this->data->order) ? $orders : "$o,$orders";
+        }
         return $this;
     }
 
     // ----------------------------------------------------------------------
-    //  限制
+    //  限制：$from,$num | $num
     // ----------------------------------------------------------------------
 
     function limit($from, $num = null)
     {
-        if (is_null($num)) {
-            $num = $from;
-            $from = 0;
-        }
-        $this->query->limit = [$from, $num];
+        $limit = [$from];
+        is_null($num) ? array_unshift($limit, 0) : array_push($limit, $num);
+        $this->data->limit = $limit;
         return $this;
     }
 
     // ----------------------------------------------------------------------
-    //  获取SQL：增、删、改、查
+    //  获取SQL：增、删、改、查、模型
     // ----------------------------------------------------------------------
 
-    function insert($values = null)
+    function insert()
     {
-        $this->values($values);
-        return $this->queryModel(function ($obj) {
-            return 'INSERT INTO' . $obj->parseTable() . $obj->parseValues();
+        return $this->queryModel(function () {
+            return 'INSERT INTO' . $this->parseTable() . $this->parseValues();
         });
     }
 
     function delete()
     {
-        return $this->queryModel(function ($obj) {
-            return 'DELETE FROM' . $obj->parseTable() . $obj->parseSql('on') . $obj->parseWhere() . $obj->parseSql('group') . $obj->parseSql('order') . $obj->parseSql('limit');
+        return $this->queryModel(function () {
+            return 'DELETE FROM' . $this->parseTable() . $this->parseSql('where') . $this->parseSql('group') . $this->parseSql('order') . $this->parseSql('limit');
         });
     }
 
-    function update($set = null, $bind = null)
+    function update()
     {
-        $this->set($set, $bind);
-        return $this->queryModel(function ($obj) {
-            return 'UPDATE' . $obj->parseTable() . $obj->parseSql('on') . $obj->parseSet() . $obj->parseWhere() . $obj->parseSql('group') . $obj->parseSql('order') . $obj->parseSql('limit');
+        return $this->queryModel(function () {
+            return 'UPDATE' . $this->parseTable() . $this->parseSet() . $this->parseSql('where') . $this->parseSql('group') . $this->parseSql('order') . $this->parseSql('limit');
         });
     }
 
-    function select($field = null)
+    function select()
     {
-        $this->field($field);
-        return $this->queryModel(function ($obj) {
-            return 'SELECT' . $obj->parseSql('field') . ' FROM' . $obj->parseTable() . $obj->parseSql('on') . $obj->parseWhere() . $obj->parseSql('group') . $obj->parseSql('order') . $obj->parseSql('limit');
+        return $this->queryModel(function () {
+            return 'SELECT' . $this->parseSql('field') . ' FROM' . $this->parseTable() . $this->parseSql('where') . $this->parseSql('group') . $this->parseSql('order') . $this->parseSql('limit');
         });
     }
 
-    function queryModel($func)
+    private function queryModel($func)
     {
         $sql = call_user_func($func, $this);
-        $bind = $this->query->bind;
-        $this->query->clear();
+        $bind = $this->data->bind;
+        $this->data->clear();
         return [$sql, $bind];
     }
-
-    // ----------------------------------------------------------------------
-    //  修改字段：加、减、乘、除
-    // ----------------------------------------------------------------------
 
     // ----------------------------------------------------------------------
     //  解析SQL：表、表结构、字段修改、字段增加、条件、指定SQL
@@ -282,20 +286,20 @@ final class Query extends Instance
 
     protected function parseTable($rArr = false)
     {
-        if (is_null($this->tableArr) && is_null($this->tableStr)) {
-            $tableStr = " `{$this->table}`" . ($this->alias ? " AS `{$this->alias}`" : "");
-            $tableArr = [$this->table => $this->alias];
-            $joins = $this->join;
+        if (is_null($this->data->tableArr) && is_null($this->data->tableStr)) {
+            $tableStr = " `{$this->table}`" . (is_null($this->data->alias) ? " AS `{$this->data->alias}`" : "");
+            $tableArr = [$this->table => $this->data->alias];
+            $joins = $this->data->join;
             if (is_array($joins)) {
                 foreach ($joins as $join) {
-                    $tableStr .= " {$join[0]} JOIN `{$join[1]}`" . (is_null($join[2]) ? '' : " AS `{$join[2]}`");
+                    $tableStr .= " {$join[0]} JOIN `{$join[1]}` AS `{$join[2]}` ON `" . preg_replace('/(\w+)\.(\w+)/', '`\1`.`\2`', $join[3]) . "`";
                     $tableArr[$join[1]] = $join[2];
                 }
             }
-            $this->tableArr = $tableArr;
-            $this->tableStr = $tableStr;
+            $this->data->tableArr = $tableArr;
+            $this->data->tableStr = $tableStr;
         }
-        return $rArr ? $this->tableArr : $this->tableStr;
+        return $rArr ? $this->data->tableArr : $this->data->tableStr;
     }
 
     protected function tableDesc()
@@ -373,33 +377,24 @@ final class Query extends Instance
 
     protected function parseWhere()
     {
-        return ($where = $this->where) ? ' WHERE ' . self::unquote($where) : '';
+        return ($where = $this->data->where) ? ' WHERE ' . $where : '';
     }
 
     protected function parseSql($type)
     {
-        $val = $this->$type;
+        $val = $this->data->$type;
         if ($val) {
             switch ($type) {
-                case 'on':
-                    $i = 'ON ';
-                    break;
                 case 'field':
-                    $i = '';
-                    break;
-                case 'group':
-                    $i = 'GROUP BY ';
-                    break;
+                case 'where':
                 case 'order':
-                    $i = 'ORDER BY ';
-                    break;
                 case 'limit':
-                    $i = 'LIMIT ';
-                    break;
+                    return ' '.strtoupper($type).' '.$val;
+                case 'group':
+                    return ' GROUP BY '.$val;
                 default:
                     return '';
             }
-            return ' ' . $i . self::unquote(is_array($val) ? implode(',', $val) : $val);
         } else {
             return $type === 'field' ? ' *' : '';
         }
