@@ -2,7 +2,7 @@
 
 namespace csn;
 
-abstract class DbBase
+abstract class DbBase extends Instance
 {
 
     // ----------------------------------------------------------------------
@@ -47,10 +47,10 @@ abstract class DbBase
     final protected static function node($address)
     {
         return key_exists($address, self::$nodes) ? self::$nodes[$address] : call_user_func(function () use ($address) {
-        $links = Config::data('mysql.link');
-        key_exists($address, $links) || Csn::end('数据库连接配置地址 ' . $address . ' 不存在');
-        return $links[$address];
-    });
+            $links = Config::data('mysql.link');
+            key_exists($address, $links) || Csn::end('数据库连接配置地址 ' . $address . ' 不存在');
+            return $links[$address];
+        });
     }
 
     // ----------------------------------------------------------------------
@@ -215,8 +215,9 @@ abstract class DbBase
 
     final function __call($fn, $args)
     {
-        method_exists($this->query, $fn) && call_user_func_array([$this->query, $fn], $args);
-        return $this;
+        method_exists($this->query, $fn) || Csn::dump(get_called_class() . '对象不存在方法：' . $fn);
+        $obj = call_user_func_array([$this->query, $fn], $args);
+        return substr($fn, -3) === 'Sql' ? $obj : $this;
     }
 
 }

@@ -64,7 +64,7 @@ final class Where extends Instance
     private function whereModel($args, $type = 'AND')
     {
         $field = $args[0];
-        if (is_callable($field, true)) {
+        if (is_callable($field)) {
             $obj = self::instance();
             call_user_func($field, $obj);
             list($where, $bind) = $obj->make();
@@ -114,7 +114,7 @@ final class Where extends Instance
             default:
                 $parse = $this->bind($key, $value);
         }
-        return $this->whereMake('(' . Query::unquote($field) . ' ' . $op . ' ' . $parse . ')', $type);
+        return $this->whereMake(Query::unquote($field) . ' ' . $op . ' ' . $parse, $type);
     }
 
     // ----------------------------------------------------------------------

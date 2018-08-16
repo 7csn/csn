@@ -106,7 +106,7 @@ final class Query extends Instance
     private function whereModel($args, $type = 'AND', $fn = 'where')
     {
         $obj = Where::instance();
-        is_callable($func = $args[0], true) ? call_user_func($func, $obj) : call_user_func_array([$obj, $fn], $args);
+        is_callable($func = $args[0]) ? call_user_func($func, $obj) : call_user_func_array([$obj, $fn], $args);
         list($where, $bind) = $obj->make();
         return $this->whereBind($where, $bind, $type);
     }
@@ -241,21 +241,21 @@ final class Query extends Instance
     //  获取SQL：增、删、改、查、模型
     // ----------------------------------------------------------------------
 
-    function insert()
+    function insertSql()
     {
         return $this->queryModel(function () {
             return 'INSERT INTO' . $this->parseTable() . $this->parseValues();
         });
     }
 
-    function delete()
+    function deleteSql()
     {
         return $this->queryModel(function () {
             return 'DELETE FROM' . $this->parseTable() . $this->parseSql('where') . $this->parseSql('group') . $this->parseSql('order') . $this->parseSql('limit');
         });
     }
 
-    function update($address, $dbn)
+    function updateSql($address, $dbn)
     {
         return $this->queryModel(function () use ($address, $dbn) {
             $this->position($address, $dbn);
@@ -263,7 +263,7 @@ final class Query extends Instance
         });
     }
 
-    function select($address, $dbn)
+    function selectSql($address, $dbn)
     {
         return $this->queryModel(function () use ($address, $dbn) {
             $this->position($address, $dbn);

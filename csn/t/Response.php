@@ -45,7 +45,7 @@ final class Response extends Instance
                 $run = file_get_contents($html);
             } else {
                 $run = Course::instance(function ($obj) use ($route) {
-                    return is_callable($point = $route['point'], true) ? call_user_func_array($point, self::actionParams((new \ReflectionFunction($point))->getParameters(), $route['args'])) : $obj->action($point, $route['args']);
+                    return is_callable($point = $route['point']) ? call_user_func_array($point, self::actionParams((new \ReflectionFunction($point))->getParameters(), $route['args'])) : $obj->action($point, $route['args']);
                 })->args($this)->run();
                 $route['cache'] > 0 && File::write($html, $run, true);
             }

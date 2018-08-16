@@ -20,7 +20,6 @@ final class Db extends DbBase
 
     function construct()
     {
-        $this->component();
         return self::single();
     }
 
@@ -79,7 +78,7 @@ final class Db extends DbBase
     {
         $dth = self::dthDefault($this->address);
         $table = (is_null($th) ? $dth : $th) . $table;
-        return $this->position($table, $dth);
+        return $this->component($table, $dth);
     }
 
     // ----------------------------------------------------------------------
@@ -122,30 +121,31 @@ final class Db extends DbBase
     // ----------------------------------------------------------------------
 
     // 增
-    function insert($field = null)
+    function insert()
     {
-        list($sql, $bind) = $this->insertSql($field);
+        list($sql, $bind) = $this->insertSql($this->address, $this->dbn);
         return $this->execute($sql, $bind, true);
     }
 
     // 删
     function delete()
     {
-        list($sql, $bind) = $this->deleteSql();
+        list($sql, $bind) = $this->deleteSql($this->address, $this->dbn);
+        Csn::dump($sql, $bind);
         return $this->execute($sql, $bind);
     }
 
     // 改
-    function update($field = null)
+    function update()
     {
-        list($sql, $bind) = $this->updateSql($field);
+        list($sql, $bind) = $this->updateSql($this->address, $this->dbn);
         return $this->execute($sql, $bind);
     }
 
     // 查多行
     function select($rArr = false)
     {
-        list($sql, $bind) = $this->selectSql();
+        list($sql, $bind) = $this->selectSql($this->address, $this->dbn);
         return $this->query($sql, $bind, $rArr);
     }
 
