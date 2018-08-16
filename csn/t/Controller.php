@@ -9,17 +9,17 @@ class Controller
     //  获取项目控制器对象
     // ----------------------------------------------------------------------
 
-    protected static $controllers = [];
+    protected static $loaders = [];
 
     final static function loader($controller, $module = '')
     {
         $name = ($module ? str_replace('/', DS, $module) . DS : '') . $controller;
-        if (key_exists($name, self::$controllers)) return self::$controllers[$name];
+        if (key_exists($name, self::$loaders)) return self::$loaders[$name];
         is_file($file = APP_CONTROLLER . $name . '.php') ? Csn::need($file) : Csn::end('控制器' . $name . '不存在');
         $class = '\app\c\\' . $name;
-        self::$controllers[$name] = new $class();
-        method_exists(self::$controllers[$name], 'init') && self::$controllers[$name]->init();
-        return self::$controllers[$name];
+        self::$loaders[$name] = new $class();
+        method_exists(self::$loaders[$name], 'init') && self::$loaders[$name]->init();
+        return self::$loaders[$name];
     }
 
     // ----------------------------------------------------------------------
