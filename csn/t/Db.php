@@ -152,8 +152,8 @@ final class Db extends DbBase
     // 查单行
     function find($rArr = false)
     {
-        $limit = $this->components->limit;
-        $this->components->limit = is_null($limit) ? 1 : [$limit[0], 1];
+        $limit = $this->query->limit;
+        $this->query->limit = is_null($limit) ? 1 : [$limit[0], 1];
         $rm = new \ReflectionMethod($this, 'select');
         $res = $rm->invokeArgs($this, [$rArr]);
         return current($res) ?: [];

@@ -6,31 +6,12 @@ class Controller
 {
 
     // ----------------------------------------------------------------------
-    //  获取模型(框架核心、框架外调、项目)对象
-    // ----------------------------------------------------------------------
-
-    final static function core($name, $args = [])
-    {
-        return Instance::create('csn\\', $name, $args);
-    }
-
-    final static function other($name, $args = [])
-    {
-        return Instance::create('csn\y\\', $name, $args);
-    }
-
-    final protected function model($name, $args = [])
-    {
-        return Instance::create('app\m\\', $name, $args);
-    }
-
-    // ----------------------------------------------------------------------
     //  获取项目控制器对象
     // ----------------------------------------------------------------------
 
     protected static $controllers = [];
 
-    final static function controller($controller, $module = '')
+    final static function loader($controller, $module = '')
     {
         $name = ($module ? str_replace('/', DS, $module) . DS : '') . $controller;
         if (key_exists($name, self::$controllers)) return self::$controllers[$name];

@@ -2,7 +2,7 @@
 
 namespace csn;
 
-abstract class DbBase extends Data
+abstract class DbBase
 {
 
     // ----------------------------------------------------------------------
@@ -201,33 +201,22 @@ abstract class DbBase extends Data
     //  初始化SQL因素对象
     // ----------------------------------------------------------------------
 
-    protected $components;
+    protected $query;
 
-    final protected function component()
+    final protected function component($table, $dth)
     {
-        $this->components = Data::instance();
+        $this->query = Query::instance($table, $dth);
         return $this;
     }
 
     // ----------------------------------------------------------------------
-    //  SQL因素
+    //  SQL因素方法
     // ----------------------------------------------------------------------
 
-    // 主表及默认表前缀
-    final function position($table, $dth)
+    final function __call($fn, $args)
     {
-        $this->components->table = $table;
-        $this->components->dth = $dth;
+        method_exists($this->query, $fn) && call_user_func_array([$this->query, $fn], $args);
         return $this;
-    }
-
-    // ----------------------------------------------------------------------
-    //  SQL因素
-    // ----------------------------------------------------------------------
-
-    function __call($fn, $args)
-    {
-
     }
 
 }

@@ -45,7 +45,7 @@ final class Response extends Instance
                 $run = file_get_contents($html);
             } else {
                 $run = Course::instance(function ($obj) use ($route) {
-                    return is_callable($point = $route['point']) ? call_user_func_array($point, self::actionParams((new \ReflectionFunction($point))->getParameters(), $route['args'])) : $obj->action($point, $route['args']);
+                    return is_callable($point = $route['point'], true) ? call_user_func_array($point, self::actionParams((new \ReflectionFunction($point))->getParameters(), $route['args'])) : $obj->action($point, $route['args']);
                 })->args($this)->run();
                 $route['cache'] > 0 && File::write($html, $run, true);
             }
@@ -82,7 +82,7 @@ final class Response extends Instance
         $module = substr($match[2][0], 0, -1);
         $action = $match[5][0];
         // 加载控制器
-        $controller = Controller::controller($match[4][0], $module);
+        $controller = Controller::loader($match[4][0], $module);
         method_exists($controller, $action) || Csn::end('控制器文件' . $match[1][0] . '.php找不到方法' . $action);
         $rm = new \ReflectionMethod($controller, $action);
         return $rm->invokeArgs($controller, $this->actionParams($rm->getParameters(), $args));

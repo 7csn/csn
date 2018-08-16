@@ -160,8 +160,7 @@ abstract class Model extends DbBase
     // 条件
     final static function which($where, $bind = null, $obj = null)
     {
-        $class = get_called_class();
-        return is_null($obj) ? $class::instance()->where($where)->bind($bind) : $obj->where($where)->bind($bind);
+        return is_null($obj) ? static::instance()->where($where)->bind($bind) : $obj->where($where)->bind($bind);
     }
 
     // 主键
@@ -216,8 +215,8 @@ abstract class Model extends DbBase
     // 查单行
     final function find($rArr = false)
     {
-        $limit = $this->components->limit;
-        $this->components->limit = is_null($limit) ? 1 : [$limit[0], 1];
+        $limit = $this->query->limit;
+        $this->query->limit = is_null($limit) ? 1 : [$limit[0], 1];
         $rm = new \ReflectionMethod($this, 'select');
         $res = $rm->invokeArgs($this, [$rArr]);
         return current($res) ?: [];

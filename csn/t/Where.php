@@ -64,7 +64,7 @@ final class Where extends Instance
     private function whereModel($args, $type = 'AND')
     {
         $field = $args[0];
-        if (is_callable($field)) {
+        if (is_callable($field, true)) {
             $obj = self::instance();
             call_user_func($field, $obj);
             list($where, $bind) = $obj->make();

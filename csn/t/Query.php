@@ -106,7 +106,7 @@ final class Query extends Instance
     private function whereModel($args, $type = 'AND', $fn = 'where')
     {
         $obj = Where::instance();
-        is_callable($func = $args[0]) ? call_user_func($func, $obj) : call_user_func_array([$obj, $fn], $args);
+        is_callable($func = $args[0], true) ? call_user_func($func, $obj) : call_user_func_array([$obj, $fn], $args);
         list($where, $bind) = $obj->make();
         return $this->whereBind($where, $bind, $type);
     }
