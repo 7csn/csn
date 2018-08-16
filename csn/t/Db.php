@@ -32,7 +32,7 @@ final class Db extends DbBase
 
     protected function address($key)
     {
-        $dbs = Config::data('mysql.db.nodes');
+        $dbs = Config::data('mysql.db');
         key_exists($key, $dbs) || Csn::end('数据库配置 db 不存在 ' . $key . ' 键');
         $this->address = $dbs[$key];
         $this->dbn = self::dbnDefault($dbs[$key]);
@@ -47,23 +47,9 @@ final class Db extends DbBase
 
     function dbn($dbn)
     {
-        $this->dbn = is_null($dbn) ? self::dbnDefault($this->address) : $dbn;
+        is_null($dbn) && $dbn = self::dbnDefault($this->address);
+        $this->dbn === $dbn || $this->dbn = $dbn;
         return $this;
-    }
-
-    // ----------------------------------------------------------------------
-    //  获取节点信息
-    // ----------------------------------------------------------------------
-
-    private static $node = [];
-
-    final protected static function node($address)
-    {
-        return key_exists($address, self::$node) ? self::$node[$address] : call_user_func(function () use ($address) {
-            $links = Config::data('mysql.db.link');
-            key_exists($address, $links) || Csn::end('数据库 db 连接配置地址 ' . $address . ' 不存在');
-            return $links[$address];
-        });
     }
 
     // ----------------------------------------------------------------------
@@ -83,15 +69,6 @@ final class Db extends DbBase
     final protected static function dbnDefault($address)
     {
         return self::node($address)['dbn'];
-    }
-
-    // ----------------------------------------------------------------------
-    //  表结构
-    // ----------------------------------------------------------------------
-
-    protected static function desc($tbn)
-    {
-        return self::describe(self::instance()->address, self::instance()->dbn, $tbn);
     }
 
     // ----------------------------------------------------------------------

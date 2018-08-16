@@ -92,19 +92,24 @@ final class Where extends Instance
         $key = Query::bindKey($field);
         switch ($op = strtoupper($op)) {
             case 'IN':
-                is_array($value) || $value = explode(',', $value);
                 $ins = [];
-                foreach ($value as $k => $v) {
-                    $ins[] = $this->bind($key . '_I' . $k, $v);
+                if (is_array($value)) {
+                    foreach ($value as $k => $v) {
+                        $ins[] = $this->bind($key . '_I' . $k, $v);
+                    }
+                } else {
+                    foreach (explode(',', $value) as $k => $v) {
+                        $ins[] = $this->bind($key . '_I' . $k, Query::trim($v));
+                    }
                 }
                 $parse = '(' . join(',', $ins) . ')';
                 break;
             case 'BETWEEN':
-                list($start, $end) = is_array($value) ?: explode(',', $value);
-                $parse = "{$this->bind($key . '_bs_', $start)} AND {$this->bind($key . '_be_', $end)}";
+                list($start, $end) = is_array($value) ? $value : explode(',', $value);
+                $parse = "{$this->bind($key . '_BS_', Query::trim($start))} AND {$this->bind($key . '_BE_', Query::trim($end))}";
                 break;
             case 'LIKE':
-                $parse = $this->bind($key . '_l_', $value);
+                $parse = $this->bind($key . '_L_', $value);
                 break;
             default:
                 $parse = $this->bind($key, $value);
@@ -129,7 +134,7 @@ final class Where extends Instance
     private function bind($key, $value)
     {
         $bind = "{$key}_W{$this->id}";
-        $this->bind[$bind] = trim($value);
+        $this->bind[$bind] = $value;
         return $bind;
     }
 

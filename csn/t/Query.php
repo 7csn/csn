@@ -2,7 +2,7 @@
 
 namespace csn;
 
-class Query extends Instance
+final class Query extends Instance
 {
 
     // ----------------------------------------------------------------------
@@ -24,24 +24,11 @@ class Query extends Instance
     private $data;
 
     // ----------------------------------------------------------------------
-    //  公共标记
-    // ----------------------------------------------------------------------
-
-    private static $sign = 0;
-
-    // ----------------------------------------------------------------------
-    //  绑定标记
-    // ----------------------------------------------------------------------
-
-    private $id;
-
-    // ----------------------------------------------------------------------
     //  构造函数
     // ----------------------------------------------------------------------
 
     function construct($table, $prefix = '')
     {
-        $this->id = ++self::$sign;
         $this->table = $table;
         $this->prefix = $prefix;
         $this->data = Data::instance();
@@ -55,6 +42,16 @@ class Query extends Instance
     {
         $this->data->alias = $alias;
         return $this;
+    }
+
+    // ----------------------------------------------------------------------
+    //  数据库定位
+    // ----------------------------------------------------------------------
+
+    private function position($address, $dbn)
+    {
+        $this->data->address = $address;
+        $this->data->dbn = $dbn;
     }
 
     // ----------------------------------------------------------------------
@@ -192,7 +189,7 @@ class Query extends Instance
                 $this->setModel($k, $v, $func);
             }
         } else {
-            $key = self::bindKey($field) . '_S_Q' . $this->id;
+            $key = self::bindKey($field) . '_S';
             $field = self::unquote($field);
             $set = call_user_func($func, $field) . ' ' . $key;
             $this->setBind($set, [$field => $value]);
@@ -258,16 +255,18 @@ class Query extends Instance
         });
     }
 
-    function update()
+    function update($address, $dbn)
     {
-        return $this->queryModel(function () {
-            return 'UPDATE' . $this->parseTable() . $this->parseSet() . $this->parseSql('where') . $this->parseSql('group') . $this->parseSql('order') . $this->parseSql('limit');
+        return $this->queryModel(function () use ($address, $dbn) {
+            $this->position($address, $dbn);
+            return 'UPDATE' . $this->parseTable() . $this->parseSql('set') . $this->parseSql('where') . $this->parseSql('group') . $this->parseSql('order') . $this->parseSql('limit');
         });
     }
 
-    function select()
+    function select($address, $dbn)
     {
-        return $this->queryModel(function () {
+        return $this->queryModel(function () use ($address, $dbn) {
+            $this->position($address, $dbn);
             return 'SELECT' . $this->parseSql('field') . ' FROM' . $this->parseTable() . $this->parseSql('where') . $this->parseSql('group') . $this->parseSql('order') . $this->parseSql('limit');
         });
     }
@@ -281,14 +280,14 @@ class Query extends Instance
     }
 
     // ----------------------------------------------------------------------
-    //  解析SQL：表、表结构、字段修改、字段增加、条件、指定SQL
+    //  解析SQL：表、表结构、修改字段、插入字段、指定SQL
     // ----------------------------------------------------------------------
 
     protected function parseTable($rArr = false)
     {
         if (is_null($this->data->tableArr) && is_null($this->data->tableStr)) {
-            $tableStr = " `{$this->table}`" . (is_null($this->data->alias) ? " AS `{$this->data->alias}`" : "");
-            $tableArr = [$this->table => $this->data->alias];
+            $tableStr = " `{$this->table}`" . (is_null($this->data->alias) ? "" : " AS `{$this->data->alias}`");
+            $tableArr = [$this->table => is_null($this->data->alias) ? $this->data->alias : $this->table];
             $joins = $this->data->join;
             if (is_array($joins)) {
                 foreach ($joins as $join) {
@@ -304,56 +303,30 @@ class Query extends Instance
 
     protected function tableDesc()
     {
-        if (is_null($this->tableDesc)) {
+        if (is_null($this->data->tableDesc)) {
             $tableDesc = [];
-            $class = get_called_class();
+            $address = $this->data->address;
+            $dbn = $this->data->dbn;
             foreach ($this->parseTable(true) as $table => $alias) {
-                $tableDesc[is_null($alias) ? $table : $alias] = $class::desc($table);
+                $tableDesc[is_null($alias) ? $table : $alias] = DbBase::describe($address, $dbn, $table);
             }
-            $this->tableDesc = $tableDesc;
+            $this->data->tableDesc = $tableDesc;
         }
-        return $this->tableDesc;
-    }
-
-    protected function parseSet()
-    {
-        // 过滤直接条件
-        if (!is_array($set = $this->set)) return ' SET ' . $set;
-        $bind = $this->bind;
-        $setArr = [];
-        foreach ($this->tableDesc() as $tbn => $desc) {
-            foreach ($desc->list as $name => $field) {
-                // 过滤自增字段
-                if ($field->Extra === 'auto_increment') continue;
-                if (key_exists($name, $set)) {   // 无别名表
-                    $setArr[] = "`$name` = :{$name}__";
-                    $bind[":{$name}__"] = self::parseValue($field, $set[$name]);
-                } else {
-                    if (key_exists($key = $tbn . '.' . $name, $set)) {    // 别名表
-                        $setArr[] = "`$tbn`.`$name` = :{$name}__{$tbn}__";
-                        $bind[":{$name}__{$tbn}__"] = self::parseValue($field, $set[$name]);
-                    }
-                }
-            }
-        }
-        // 更新绑定数据
-        $this->bind = $bind;
-        // 返回修改字符串
-        return ' SET ' . join(',', $setArr);
+        return $this->data->tableDesc;
     }
 
     protected function parseValues()
     {
-        // 表结构
-        $tableDesc = $this->tableDesc();
-        // 二维数组：批处理
-        $values = is_array(current($values = $this->values)) ? $values : [$values];
+        // 转成二维数组批量处理
+        $values = is_array($this->data->values[0]) ? $this->data->values : [$this->data->values];
         // 绑定数组
         $bind = [];
         // 字段名称数组
         $valueBefore = [];
         // 字段绑定名数组
         $valueAfter = [];
+        // 表结构
+        $tableDesc = $this->tableDesc();
         for ($i = 0, $c = count($values); $i < $c; $i++) {
             // 单次绑定名数组
             $after = [];
@@ -363,21 +336,19 @@ class Query extends Instance
                     // 过滤自增字段
                     if ($fieldObj->Extra === 'auto_increment') continue;
                     // 过滤不存在字段
-                    if (!key_exists($name, $value)) continue;
-                    $i > 0 || $valueBefore[] = "`$name`";
-                    $after[] = ":{$name}__$i";
-                    $bind[":{$name}__$i"] = self::parseValue($fieldObj, $value[$name]);
+                    if (!key_exists($name, $value)) {
+                        if ($fieldObj->Null === 'NO' && $fieldObj->Default === null) Csn::end('数据表' . $tbn . '插入数据缺少必要字段' . $name);
+                        continue;
+                    }
+                    $i > 0 || $valueBefore[] = $name;
+                    $after[] = ":{$name}_V$i";
+                    $bind[":{$name}_V$i"] = DbBase::parseValue($fieldObj, $value[$name]);
                 }
             }
             $valueAfter[] = '(' . join(',', $after) . ')';
         }
-        $this->bind = $bind;
-        return ' (' . join(',', $valueBefore) . ') VALUES ' . join(',', $valueAfter);
-    }
-
-    protected function parseWhere()
-    {
-        return ($where = $this->data->where) ? ' WHERE ' . $where : '';
+        $this->data->bind = $bind;
+        return ' (`' . join('`,`', $valueBefore) . '`) VALUES ' . join(',', $valueAfter);
     }
 
     protected function parseSql($type)
@@ -385,23 +356,30 @@ class Query extends Instance
         $val = $this->data->$type;
         if ($val) {
             switch ($type) {
-                case 'field':
+                case 'set':
                 case 'where':
                 case 'order':
                 case 'limit':
-                    return ' '.strtoupper($type).' '.$val;
+                    $text = strtoupper($type) . ' ' . $val;
+                    break;
+                case 'field':
+                    $text = $val;
+                    break;
                 case 'group':
-                    return ' GROUP BY '.$val;
+                    $text = 'GROUP BY ' . $val;
+                    break;
                 default:
-                    return '';
+                    $text = false;
+                    break;
             }
+            return $text ? ' ' . $text : '';
         } else {
             return $type === 'field' ? ' *' : '';
         }
     }
 
     // ----------------------------------------------------------------------
-    //  绑定键名
+    //  表名、字段名转化键名
     // ----------------------------------------------------------------------
 
     static function bindKey($key)
@@ -420,6 +398,15 @@ class Query extends Instance
         if ($index === false) return "`$name`";
         $field = substr($name, $index + 1);
         return '`' . substr($name, 0, $index) . '`.' . ($field === '*' ? $field : ('`' . $field . '`'));
+    }
+
+    // ----------------------------------------------------------------------
+    //  剔除变量两边空格
+    // ----------------------------------------------------------------------
+
+    static function trim($value)
+    {
+        return is_string($value) ? trim($value) : $value;
     }
 
 }

@@ -50,21 +50,6 @@ abstract class Model extends DbBase
     }
 
     // ----------------------------------------------------------------------
-    //  获取节点信息
-    // ----------------------------------------------------------------------
-
-    private static $node = [];
-
-    final protected static function node($address)
-    {
-        return key_exists($address, self::$node) ? self::$node[$address] : call_user_func(function () use ($address) {
-            $links = Config::data('mysql.model.link');
-            key_exists($address, $links) || Csn::end('数据库 model 连接配置地址 ' . $address . ' 不存在');
-            return $links[$address];
-        });
-    }
-
-    // ----------------------------------------------------------------------
     //  库、表、字段信息
     // ----------------------------------------------------------------------
 
@@ -79,7 +64,7 @@ abstract class Model extends DbBase
             strpos($class, 'app\\m\\') === 0 || Csn::end('数据库模型' . $class . '异常');
             ($name = substr($class, 6)) || Csn::end('数据库模型' . $class . '异常');
             $arr = array_reverse(explode('\\', $name));
-            self::$names[$class] = ['dbn' => key_exists(1, $arr) ? strtolower($arr[1]) : Config::data('mysql.model.dbn'), 'tbn' => $class::$dth . strtolower($arr[0])];
+            self::$names[$class] = ['dbn' => key_exists(1, $arr) ? strtolower($arr[1]) : self::node(self::slave())['dbn'], 'tbn' => $class::$dth . strtolower($arr[0])];
         }
         return self::$names[$class];
     }
@@ -102,24 +87,19 @@ abstract class Model extends DbBase
     // 获取表前缀
     final protected static function dth()
     {
-        $class = get_called_class();
-        return $class::$dth;
+        return static::$dth;
     }
 
-    // 表结构
-    private static $desc = [];
-
     // 获取表结构
-    final protected static function desc($tbn)
+    final protected static function desc()
     {
-        $dbn = self::dbn();
-        return empty(self::$desc[$dbn][$tbn]) ? self::describe(self::slave(), $dbn, $tbn) : self::$desc[$dbn][$tbn];
+        return self::describe(self::slave(), self::dbn(), self::tbn());
     }
 
     // 主键及对象锁定
     final protected static function primaryKey($id)
     {
-        $desc = self::desc(self::tbn());
+        $desc = self::desc();
         $primaryKey = $desc->primaryKey;
         return is_null($primaryKey) ? Csn::end('库 ' . self::dbn() . ' 中表 ' . self::tbn() . ' 主键不存在') : [$primaryKey, self::parseValue($desc->list->$primaryKey, $id)];
     }
@@ -258,7 +238,7 @@ abstract class Model extends DbBase
     // 收集表单数据
     final function collect()
     {
-        $desc = self::desc(self::tbn());
+        $desc = self::desc();
         $primaryKey = $desc->primaryKey;
         foreach ($desc->list as $k => $v) {
             if ($k === $primaryKey) continue;

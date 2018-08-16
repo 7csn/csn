@@ -25,18 +25,32 @@ abstract class DbBase extends Data
     //  连接信息
     // ----------------------------------------------------------------------
 
-    // 连接列表：连接、默认库、当前库
+    // 连接列表：连接、当前库
     private static $linkInfo = [];
 
     // 获取连接信息
     final protected static function linkInfo($address)
     {
         return key_exists($address, self::$linkInfo) ? self::$linkInfo[$address] : self::$linkInfo[$address] = call_user_func(function () use ($address) {
-            $class = get_called_class();
-            $node = $class::node($address);
+            $node = self::node($address);
             list($host, $port) = explode(':', $address);
             return ['link' => new \PDO("mysql:host=$host;port=$port", $node['du'], $node['dp']), 'dbn' => null];
         });
+    }
+
+    // ----------------------------------------------------------------------
+    //  获取节点信息
+    // ----------------------------------------------------------------------
+
+    private static $nodes = [];
+
+    final protected static function node($address)
+    {
+        return key_exists($address, self::$nodes) ? self::$nodes[$address] : call_user_func(function () use ($address) {
+        $links = Config::data('mysql.link');
+        key_exists($address, $links) || Csn::end('数据库连接配置地址 ' . $address . ' 不存在');
+        return $links[$address];
+    });
     }
 
     // ----------------------------------------------------------------------
@@ -62,7 +76,7 @@ abstract class DbBase extends Data
 
     private static $describe = [];
 
-    final protected static function describe($address, $dbn, $tbn)
+    final static function describe($address, $dbn, $tbn)
     {
         return empty(self::$describe[$address][$dbn][$tbn]) ? self::$describe[$address][$dbn][$tbn] = call_user_func(function () use ($address, $dbn, $tbn) {
             $desc = new \stdClass();
@@ -83,7 +97,7 @@ abstract class DbBase extends Data
     //  字段值处理
     // ----------------------------------------------------------------------
 
-    final protected static function parseValue($structure, $val = null)
+    final static function parseValue($structure, $val = null)
     {
         switch (explode('(', $structure->Type)[0]) {
             case 'char':
@@ -207,286 +221,13 @@ abstract class DbBase extends Data
         return $this;
     }
 
-    // 表别名
-    final function alias($alias)
-    {
-        $this->components->alias = $alias;
-        return $this;
-    }
-
-    // 关联表
-    final protected function join($table, $dth, $alias = null, $type)
-    {
-        $table = (is_null($dth) ? $this->components->dth : $dth) . $table;
-        $join = [$type, $table, $alias];
-        is_null($this->components->join) ? $this->components->join = [$join] : $this->components->join[] = $join;
-        return $this;
-    }
-
-    // 左关联
-    final function leftJoin($table, $alias = null, $dth = null)
-    {
-        return $this->join($table, $dth, $alias, 'LEFT');
-    }
-
-    // 内联
-    final function innerJoin($table, $alias = null, $dth = null)
-    {
-        return $this->join($table, $dth, $alias, 'INNER');
-    }
-
-    // 右关联
-    final function rightJoin($table, $alias = null, $dth = null)
-    {
-        return $this->join($table, $dth, $alias, 'RIGHT');
-    }
-
-    // 关联条件
-    final function on($on)
-    {
-        empty($on) || $this->components->on = $on;
-        return $this;
-    }
-
-    // 条件
-    final function where($where, $bind = null)
-    {
-        empty($where) || $this->components->where = is_null($w = $this->bind($bind)->components->where) ? $where : $w . ' AND ' . $where;
-        return $this;
-    }
-
-    // 预编译
-    final function bind($bind)
-    {
-        empty($bind) || $this->components->bind = is_null($b = $this->components->bind) ? $bind : array_merge($b, $bind);
-        return $this;
-    }
-
-    // 字段：查
-    final function field($field, $bind = null)
-    {
-        empty($field) || ($this->bind($bind)->components->field = is_array($field) ? $field : explode(',', $field));
-        return $this;
-    }
-
-    // 字段：改
-    final function set($set, $bind = null)
-    {
-        empty($set) || $this->components->set = is_null($s = $this->bind($bind)->components->set) ? $set : $s . ',' . $set;
-        return $this;
-    }
-
-    // 字段：增
-    final function values($values)
-    {
-        empty($values) || $this->components->values = $values;
-        return $this;
-    }
-
-    // 归类
-    final function group($group)
-    {
-        $this->components->group = $group;
-        return $this;
-    }
-
-    // 顺序
-    final function order($order)
-    {
-        $this->components->order = $order;
-        return $this;
-    }
-
-    // 限制
-    final function limit($from, $num = null)
-    {
-        if (is_null($num)) {
-            $num = $from;
-            $from = 0;
-        }
-        $this->components->limit = [$from, $num];
-        return $this;
-    }
-
     // ----------------------------------------------------------------------
-    //  获取SQL：增、删、改、查
+    //  SQL因素
     // ----------------------------------------------------------------------
 
-    final function insertSql($values = null)
+    function __call($fn, $args)
     {
-        $this->values($values);
-        $sql = 'INSERT INTO' . $this->parseTable() . $this->parseValues();
-        $bind = $this->components->bind;
-        $this->components->clear();
-        return [$sql, $bind];
-    }
 
-    final function deleteSql()
-    {
-        $sql = 'DELETE FROM' . $this->parseTable() . $this->parseSql('on') . $this->parseWhere() . $this->parseSql('group') . $this->parseSql('order') . $this->parseSql('limit');
-        $bind = $this->components->bind;
-        $this->components->clear();
-        return [$sql, $bind];
-    }
-
-    final function updateSql($field = null, $bind = null)
-    {
-        $this->set($field, $bind);
-        $sql = 'UPDATE' . $this->parseTable() . $this->parseSql('on') . $this->parseSet() . $this->parseWhere() . $this->parseSql('group') . $this->parseSql('order') . $this->parseSql('limit');
-        $bind = $this->components->bind;
-        $this->components->clear();
-        return [$sql, $bind];
-    }
-
-    final function selectSql()
-    {
-        $sql = 'SELECT' . $this->parseSql('field') . ' FROM' . $this->parseTable() . $this->parseSql('on') . $this->parseWhere() . $this->parseSql('group') . $this->parseSql('order') . $this->parseSql('limit');
-        $bind = $this->components->bind;
-        $this->components->clear();
-        return [$sql, $bind];
-    }
-
-    // ----------------------------------------------------------------------
-    //  SQL因素处理
-    // ----------------------------------------------------------------------
-
-    // 表处理
-    final protected function parseTable($rArr = false)
-    {
-        if (is_null($this->components->tableArr) && is_null($this->components->tableStr)) {
-            $tableStr = " `{$this->components->table}`" . ($this->components->alias ? " AS `{$this->components->alias}`" : "");
-            $tableArr = [$this->components->table => $this->components->alias];
-            $joins = $this->components->join;
-            if (is_array($joins)) {
-                foreach ($joins as $join) {
-                    $tableStr .= " {$join[0]} JOIN `{$join[1]}`" . (is_null($join[2]) ? '' : " AS `{$join[2]}`");
-                    $tableArr[$join[1]] = $join[2];
-                }
-            }
-            $this->components->tableArr = $tableArr;
-            $this->components->tableStr = $tableStr;
-        }
-        return $rArr ? $this->components->tableArr : $this->components->tableStr;
-    }
-
-    // 获取所有表结构
-    final protected function tableDesc()
-    {
-        if (is_null($this->components->tableDesc)) {
-            $tableDesc = [];
-            $class = get_called_class();
-            foreach ($this->parseTable(true) as $table => $alias) {
-                $tableDesc[is_null($alias) ? $table : $alias] = $class::desc($table);
-            }
-            $this->components->tableDesc = $tableDesc;
-        }
-        return $this->components->tableDesc;
-    }
-
-    // 字段处理：改
-    final protected function parseSet()
-    {
-        // 过滤直接条件
-        if (!is_array($set = $this->components->set)) return ' SET ' . $set;
-        $bind = $this->components->bind;
-        $setArr = [];
-        foreach ($this->tableDesc() as $tbn => $desc) {
-            foreach ($desc->list as $name => $field) {
-                // 过滤自增字段
-                if ($field->Extra === 'auto_increment') continue;
-                if (key_exists($name, $set)) {   // 无别名表
-                    $setArr[] = "`$name` = :{$name}__";
-                    $bind[":{$name}__"] = self::parseValue($field, $set[$name]);
-                } else {
-                    if (key_exists($key = $tbn . '.' . $name, $set)) {    // 别名表
-                        $setArr[] = "`$tbn`.`$name` = :{$name}__{$tbn}__";
-                        $bind[":{$name}__{$tbn}__"] = self::parseValue($field, $set[$name]);
-                    }
-                }
-            }
-        }
-        // 更新绑定数据
-        $this->components->bind = $bind;
-        // 返回修改字符串
-        return ' SET ' . join(',', $setArr);
-    }
-
-    // 字段处理：增
-    final protected function parseValues()
-    {
-        // 表结构
-        $tableDesc = $this->tableDesc();
-        // 二维数组：批处理
-        $values = is_array(current($values = $this->components->values)) ? $values : [$values];
-        // 绑定数组
-        $bind = [];
-        // 字段名称数组
-        $valueBefore = [];
-        // 字段绑定名数组
-        $valueAfter = [];
-        for ($i = 0, $c = count($values); $i < $c; $i++) {
-            // 单次绑定名数组
-            $after = [];
-            $value = $values[$i];
-            foreach ($tableDesc as $tbn => $desc) {
-                foreach ($desc->list as $name => $fieldObj) {
-                    // 过滤自增字段
-                    if ($fieldObj->Extra === 'auto_increment') continue;
-                    // 过滤不存在字段
-                    if (!key_exists($name, $value)) continue;
-                    $i > 0 || $valueBefore[] = "`$name`";
-                    $after[] = ":{$name}__$i";
-                    $bind[":{$name}__$i"] = self::parseValue($fieldObj, $value[$name]);
-                }
-            }
-            $valueAfter[] = '(' . join(',', $after) . ')';
-        }
-        $this->components->bind = $bind;
-        return ' (' . join(',', $valueBefore) . ') VALUES ' . join(',', $valueAfter);
-    }
-
-    // 条件数组处理
-    final protected function parseWhere()
-    {
-        return ($where = $this->components->where) ? ' WHERE ' . self::unquote($where) : '';
-    }
-
-    // 获取指定部分SQL语句
-    final protected function parseSql($type)
-    {
-        $val = $this->components->$type;
-        if ($val) {
-            switch ($type) {
-                case 'on':
-                    $i = 'ON ';
-                    break;
-                case 'field':
-                    $i = '';
-                    break;
-                case 'group':
-                    $i = 'GROUP BY ';
-                    break;
-                case 'order':
-                    $i = 'ORDER BY ';
-                    break;
-                case 'limit':
-                    $i = 'LIMIT ';
-                    break;
-                default:
-                    return '';
-            }
-            return ' ' . $i . self::unquote(is_array($val) ? implode(',', $val) : $val);
-        } else {
-            return $type === 'field' ? ' *' : '';
-        }
-    }
-
-    // SQL关键字辅助处理
-    final protected function unquote($str)
-    {
-        $str = preg_replace('/(?<!\:)([a-zA-Z_]+)\.([a-zA-Z_]+)/', '`\1`.`\2`', $str);
-        $str = preg_replace('/(?<!\:)([a-zA-Z_]+)\.\*/', '`\1`.*', $str);
-        return $str;
     }
 
 }
