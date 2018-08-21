@@ -19,7 +19,6 @@ final class Config extends Instance
             }
             self::$init = true;
         }
-        File::copies([CSN . '.htaccess' => PUB . '.htaccess', CSN . 'favicon.ico' => PUB . 'favicon.ico'], $force);
     }
 
     // ----------------------------------------------------------------------
