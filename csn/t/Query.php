@@ -358,15 +358,15 @@ final class Query extends Instance
             switch ($type) {
                 case 'set':
                 case 'where':
-                case 'order':
                 case 'limit':
-                    $text = strtoupper($type) . ' ' . $val;
+                    $text = strtoupper($type) . ' ' . join(',', $val);
                     break;
                 case 'field':
                     $text = $val;
                     break;
+                case 'order':
                 case 'group':
-                    $text = 'GROUP BY ' . $val;
+                    $text = strtoupper($type) . ' BY ' . $val;
                     break;
                 default:
                     $text = false;
